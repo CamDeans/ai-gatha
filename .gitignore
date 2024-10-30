@@ -1,0 +1,27 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Vercel config
+.vercel/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs and debug files
+logs/
+*.log
+*.swp
+
+# IDE settings
+.idea/
+.vscode/
