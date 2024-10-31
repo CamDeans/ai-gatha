@@ -1,10 +1,6 @@
-/**
- * Dashboard page component
- * Main interface for image generation and display
- */
 'use client'
 
-import { useState } from 'react'
+import { useState, Dispatch, SetStateAction } from 'react'
 import { useSession } from 'next-auth/react'
 import ImageDisplay from '@/components/dashboard/ImageDisplay'
 import PromptInput from '@/components/dashboard/PromptInput'
@@ -15,7 +11,7 @@ import AdvancedPromptControls from '@/components/prompts/AdvancedPromptControls'
 export default function Dashboard() {
   const { data: session } = useSession()
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
-  const [prompt, setPrompt] = useState('')
+  const [prompt, setPrompt]: [string, Dispatch<SetStateAction<string>>] = useState('')
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false)
   const [isRefinementModalOpen, setIsRefinementModalOpen] = useState(false)
   const [showAdvancedControls, setShowAdvancedControls] = useState(false)
@@ -68,4 +64,4 @@ export default function Dashboard() {
       />
     </div>
   )
-} 
+}

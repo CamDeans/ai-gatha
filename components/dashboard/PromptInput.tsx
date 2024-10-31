@@ -1,38 +1,40 @@
-/**
- * PromptInput component for image generation
- * Handles user input and API calls for image generation
- */
 'use client'
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import PromptModal from '../prompts/PromptModal';
-import PromptRefinementModal from '../prompts/PromptRefinementModal';
-import { SparkleIcon } from '../icons/SparkleIcon';
-import { WandIcon } from '../icons/WandIcon';
-import AdvancedPromptControls from '../prompts/AdvancedPromptControls';
-import ImageDisplay from './ImageDisplay';
+import { AISparkleIcon } from '../icons/AISparkleIcon';
+import { Button } from '../ui/button';
 
 interface PromptInputProps {
-  onImageGenerated: (imageUrl: string) => void;
+  onImageGenerated: (imageUrl: string | null) => void;
+  onPromptChange: (prompt: string) => void;
+  onRefinementClick: () => void;
+  onSuggestionsClick: () => void;
+  onAdvancedClick: () => void;
+  showAdvanced: boolean;
 }
 
-export default function PromptInput({ onImageGenerated }: PromptInputProps) {
+const PromptInput: React.FC<PromptInputProps> = ({ 
+  onImageGenerated, 
+  onPromptChange,
+  onRefinementClick,
+  onSuggestionsClick,
+  onAdvancedClick,
+  showAdvanced
+}) => {
   const { data: session } = useSession();
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
-  const [isRefinementModalOpen, setIsRefinementModalOpen] = useState(false);
-  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  /**
-   * Handles form submission and image generation
-   * @param e - Form submission event
-   */
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newPrompt = e.target.value;
+    setPrompt(newPrompt);
+    onPromptChange(newPrompt); // Call the onPromptChange callback
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -45,131 +47,90 @@ export default function PromptInput({ onImageGenerated }: PromptInputProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${window.location.origin}/api/generate`, {
+      const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt.trim() }),
-        credentials: 'same-origin',
       });
 
-      if (response.status === 401) {
-        router.push('/auth/signin');
-        return;
-      }
-
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate image');
+        throw new Error('Failed to generate image');
       }
 
       const data = await response.json();
-      setGeneratedImage(data.imageUrl);
-      setPrompt('');
+      onImageGenerated(data.imageUrl);
     } catch (error) {
-      console.error('Error generating image:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate image');
+      onImageGenerated(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-12rem)] space-y-4">
-      <div className="flex-none space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-foreground">
-            Enter your prompt
-          </label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsPromptModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors rounded-md hover:bg-primary/10"
-              title="Get AI suggestions"
-            >
-              <SparkleIcon className="h-4 w-4" />
-              <span>Suggestions</span>
-            </button>
-            {prompt.trim() && (
-              <button
-                type="button"
-                onClick={() => setIsRefinementModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-secondary hover:text-secondary/80 transition-colors rounded-md hover:bg-secondary/10"
-                title="Enhance your prompt"
-              >
-                <WandIcon className="h-4 w-4" />
-                <span>Enhance</span>
-              </button>
-            )}
-          </div>
-        </div>
-
+    <div className="space-y-4">
+      <div className="space-y-2">
         <textarea
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe the image you want to create..."
-          className="w-full min-h-[100px] max-h-[150px] p-4 rounded-lg border border-input bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          onChange={handlePromptChange}
+          placeholder="Describe the image you want to generate..."
+          className="w-full min-h-[100px] p-4 rounded-lg border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
           disabled={isLoading}
         />
-
-        {prompt.trim() && (
-          <button
-            type="button"
-            onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-            className="text-sm text-primary hover:text-primary/80 transition-colors"
-          >
-            {showAdvancedControls ? 'Hide' : 'Show'} Advanced Controls
-          </button>
-        )}
-
-        {showAdvancedControls && prompt.trim() && (
-          <AdvancedPromptControls
-            basePrompt={prompt}
-            onPromptUpdate={setPrompt}
-          />
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
         )}
       </div>
 
-      <div className="flex-1 min-h-0 relative overflow-hidden rounded-lg">
-        {generatedImage && (
-          <ImageDisplay imageUrl={generatedImage} />
-        )}
-      </div>
-
-      <div className="flex-none">
-        <button
+      <div className="flex items-center gap-2">
+        <Button
           onClick={handleSubmit}
-          disabled={!prompt.trim() || isLoading}
-          className="w-full btn-primary h-12 relative overflow-hidden group"
+          disabled={isLoading || !prompt.trim()}
+          className="flex-1"
         >
-          <span className={`flex items-center justify-center gap-2 transition-all duration-300 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
-          }`}>
-            <SparkleIcon className="h-5 w-5" />
-            Generate Image
-          </span>
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            </div>
+          {isLoading ? (
+            <>
+              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <AISparkleIcon className="h-4 w-4 mr-2" />
+              Generate Image
+            </>
           )}
-        </button>
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={onSuggestionsClick}
+          className="group"
+        >
+          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+          Get Ideas
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={onRefinementClick}
+          disabled={!prompt.trim()}
+          className="group"
+        >
+          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+          Refine
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={onAdvancedClick}
+          className="group"
+        >
+          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+          {showAdvanced ? 'Hide' : 'Show'} Advanced
+        </Button>
       </div>
-
-      <PromptModal
-        isOpen={isPromptModalOpen}
-        onClose={() => setIsPromptModalOpen(false)}
-        onSelectPrompt={setPrompt}
-      />
-
-      <PromptRefinementModal
-        isOpen={isRefinementModalOpen}
-        onClose={() => setIsRefinementModalOpen(false)}
-        currentPrompt={prompt}
-        onSelectRefinement={setPrompt}
-      />
     </div>
   );
-} 
+};
+
+export default PromptInput;

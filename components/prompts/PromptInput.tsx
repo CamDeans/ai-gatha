@@ -15,14 +15,14 @@ interface PromptInputProps {
   showAdvanced: boolean;
 }
 
-export default function PromptInput({ 
+const PromptInput: React.FC<PromptInputProps> = ({ 
   onImageGenerated, 
   onPromptChange,
   onRefinementClick,
   onSuggestionsClick,
   onAdvancedClick,
   showAdvanced
-}: PromptInputProps) {
+}) => {
   const { data: session } = useSession();
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
@@ -131,4 +131,6 @@ export default function PromptInput({
       </div>
     </div>
   );
-} 
+};
+
+export default PromptInput;
