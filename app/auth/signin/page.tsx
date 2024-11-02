@@ -4,89 +4,81 @@
  */
 'use client'
 
-import { signIn } from 'next-auth/react'
 import { useState } from 'react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function SignIn() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+    setLoading(true)
+    setError('')
 
     try {
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
+        callbackUrl: '/dashboard'
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
-      } else {
-        window.location.href = '/dashboard'
+        setError(result.error)
+      } else if (result?.ok) {
+        router.push('/dashboard')
       }
+    } catch (error) {
+      console.error('Sign in error:', error)
+      setError('Authentication failed. Please try again.')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {error && (
-        <div className="text-sm text-destructive text-center">
+        <div className="text-red-500 text-sm text-center">
           {error}
         </div>
       )}
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-          />
-        </div>
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          required
+          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+        />
       </div>
-
-      <Button
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          required
+          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+        />
+      </div>
+      <button
         type="submit"
-        disabled={isLoading}
-        className="w-full"
+        disabled={loading}
+        className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
       >
-        {isLoading ? 'Signing in...' : 'Sign In'}
-      </Button>
-
-      <div className="text-center text-sm">
-        <span className="text-muted-foreground">Don't have an account? </span>
-        <Link href="/auth/signup" className="text-primary hover:underline">
-          Sign Up
-        </Link>
-      </div>
+        {loading ? 'Signing in...' : 'Sign In'}
+      </button>
     </form>
   )
 } 

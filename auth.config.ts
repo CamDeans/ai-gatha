@@ -4,33 +4,6 @@ import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
 
 export const authConfig: AuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-    signOut: '/auth/signin'
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.email = user.email
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id
-        session.user.email = token.email as string
-      }
-      return session
-    }
-  },
   providers: [
     Credentials({
       name: "Credentials",
@@ -41,26 +14,26 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            return null
+            throw new Error('Missing credentials')
           }
 
-          const client = await clientPromise
-          const user = await client
-            .db("deansight")
+          const client = await clientPromise;
+          const db = client.db("deansight");
+          
+          const user = await db
             .collection("users")
-            .findOne({ email: credentials.email })
+            .findOne({ 
+              email: credentials.email.toLowerCase()
+            });
 
-          if (!user?.password) {
-            return null
+          if (!user) {
+            throw new Error('No user found')
           }
 
-          const isValid = await compare(
-            credentials.password,
-            user.password.toString()
-          )
-
+          const isValid = await compare(credentials.password, user.password);
+          
           if (!isValid) {
-            return null
+            throw new Error('Invalid password')
           }
 
           return {
@@ -69,10 +42,36 @@ export const authConfig: AuthOptions = {
             name: user.name || null
           }
         } catch (error) {
-          console.error('Auth error:', error)
-          return null
+          console.error('Auth error:', error);
+          throw error; // This will be caught by NextAuth
         }
       }
     })
-  ]
+  ],
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+    signOut: '/auth/signin'
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.email = token.email as string;
+      }
+      return session;
+    }
+  },
+  debug: process.env.NODE_ENV === 'development'
 }
