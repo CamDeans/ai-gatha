@@ -14,7 +14,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI
 const options = {
-  connectTimeoutMS: 10000, // Timeout after 10s
+  connectTimeoutMS: 1000000, // Timeout after 10s
   retryWrites: true,
   retryReads: true,
 }
