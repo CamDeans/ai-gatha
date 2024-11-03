@@ -43,7 +43,7 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          throw error; // This will be caught by NextAuth
+          throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
       }
     })
