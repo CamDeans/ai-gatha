@@ -8,12 +8,17 @@ interface ExtendedUser extends User {
   id: string;
 }
 
-interface ExtendedSession extends Session {
-  user?: {
-    id: string;
-    email: string;
-    name?: string | null;
-  }
+// Define the session user type
+interface SessionUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+}
+
+// Extend the Session type correctly
+interface ExtendedSession extends Omit<Session, 'user'> {
+  user: SessionUser;
 }
 
 export const authConfig: AuthOptions = {
@@ -61,7 +66,8 @@ export const authConfig: AuthOptions = {
           return {
             id: user._id.toString(),
             email: user.email,
-            name: user.name || null
+            name: user.name || null,
+            image: null
           }
         } catch (error) {
           console.error('Auth error:', error);
@@ -88,11 +94,15 @@ export const authConfig: AuthOptions = {
       return token;
     },
     async session({ session, token }): Promise<ExtendedSession> {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-      }
-      return session;
+      return {
+        ...session,
+        user: {
+          id: token.id as string,
+          email: token.email as string,
+          name: session.user?.name || null,
+          image: session.user?.image || null
+        }
+      };
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
