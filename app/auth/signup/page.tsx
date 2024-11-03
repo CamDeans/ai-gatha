@@ -46,12 +46,17 @@ export default function SignUp() {
       } else {
         throw new Error(data.error || 'Failed to create account')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Signup error:', error)
-      if (error.name === 'TimeoutError' || error.name === 'AbortError') {
-        setError('Request timed out. Please try again.')
+      
+      if (error instanceof Error) {
+        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+          setError('Request timed out. Please try again.')
+        } else {
+          setError(error.message || 'Failed to create account')
+        }
       } else {
-        setError(error instanceof Error ? error.message : 'Failed to create account')
+        setError('Failed to create account')
       }
     } finally {
       setIsLoading(false)
