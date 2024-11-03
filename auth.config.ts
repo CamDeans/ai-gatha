@@ -4,21 +4,27 @@ import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
 
+// Define the base user type
 interface ExtendedUser extends User {
   id: string;
 }
 
-// Define the session user type
-interface SessionUser {
+// Define the session user type that matches NextAuth's requirements
+type SessionUser = {
   id: string;
   email: string;
   name?: string | null;
   image?: string | null;
+} & {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
 }
 
-// Extend the Session type correctly
-interface ExtendedSession extends Omit<Session, 'user'> {
+// Define the session type
+type ExtendedSession = {
   user: SessionUser;
+  expires: string;
 }
 
 export const authConfig: AuthOptions = {
