@@ -8,33 +8,52 @@ import { NextRequest, NextResponse } from 'next/server';
 // Create handler
 const handler = NextAuth(authConfig);
 
-// Export a single handler for all methods
-async function auth(request: NextRequest) {
+// Helper function to create a proper request object
+function createAuthRequest(request: NextRequest) {
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace('/api/auth/', '');
+  
+  return new Request(url, {
+    method: request.method,
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      ...Object.fromEntries(request.headers)
+    }),
+    body: request.body,
+    cache: request.cache,
+    credentials: request.credentials,
+    integrity: request.integrity,
+    mode: request.mode,
+    redirect: request.redirect,
+  });
+}
+
+// Export handlers
+export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const pathname = url.pathname.replace('/api/auth/', '');
-    
-    // Create a new request with the required duplex option
-    const authRequest = new Request(url, {
-      method: request.method,
-      headers: new Headers(request.headers),
-      body: request.body,
-      duplex: 'half'
-    } as RequestInit);
-
-    // Add nextauth params
-    Object.defineProperty(authRequest, 'query', {
-      value: {
-        nextauth: pathname.split('/'),
-        ...Object.fromEntries(url.searchParams)
-      },
-      writable: false
-    });
-
+    const authRequest = createAuthRequest(request);
     const response = await handler(authRequest);
+    
+    // If response is undefined or null, return a 500 error
+    if (!response) {
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+
+    // If response doesn't have a status, assume it's a 200
+    if (!response.status) {
+      const newResponse = new Response(response.body, {
+        status: 200,
+        headers: response.headers
+      });
+      return newResponse;
+    }
+
     return response;
   } catch (error) {
-    console.error('NextAuth Error:', error);
+    console.error('NextAuth GET Error:', error);
     return NextResponse.json(
       { error: 'Authentication failed' },
       { status: 500 }
@@ -42,9 +61,37 @@ async function auth(request: NextRequest) {
   }
 }
 
-// Export all HTTP methods
-export const GET = auth;
-export const POST = auth;
+export async function POST(request: NextRequest) {
+  try {
+    const authRequest = createAuthRequest(request);
+    const response = await handler(authRequest);
+    
+    // If response is undefined or null, return a 500 error
+    if (!response) {
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+
+    // If response doesn't have a status, assume it's a 200
+    if (!response.status) {
+      const newResponse = new Response(response.body, {
+        status: 200,
+        headers: response.headers
+      });
+      return newResponse;
+    }
+
+    return response;
+  } catch (error) {
+    console.error('NextAuth POST Error:', error);
+    return NextResponse.json(
+      { error: 'Authentication failed' },
+      { status: 500 }
+    );
+  }
+}
 
 // Export other methods with proper error handling
 export async function PUT() {
