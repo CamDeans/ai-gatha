@@ -8,46 +8,33 @@ import { NextRequest, NextResponse } from 'next/server';
 // Create handler
 const handler = NextAuth(authConfig);
 
-// Helper function to create a proper request object
-async function createAuthRequest(request: NextRequest) {
-  const url = new URL(request.url);
-  const nextauthParams = url.pathname
-    .split('/')
-    .filter(param => param !== '' && param !== 'api' && param !== 'auth');
-
-  // Create a new request with minimal properties
-  const authRequest = new Request(url, {
-    method: request.method,
-    headers: new Headers(request.headers),
-    body: request.body
-  });
-
-  // Add nextauth params to request
-  Object.defineProperty(authRequest, 'query', {
-    get: () => ({
-      nextauth: nextauthParams,
-      ...Object.fromEntries(url.searchParams)
-    }),
-    enumerable: true,
-    configurable: true
-  });
-
-  return authRequest;
-}
-
-// Export handlers with error handling
-export async function GET(request: NextRequest) {
+// Export a single handler for all methods
+async function auth(request: NextRequest) {
   try {
-    const authRequest = await createAuthRequest(request);
+    const url = new URL(request.url);
+    const pathname = url.pathname.replace('/api/auth/', '');
+    
+    // Create a new request with the required duplex option
+    const authRequest = new Request(url, {
+      method: request.method,
+      headers: new Headers(request.headers),
+      body: request.body,
+      duplex: 'half'
+    } as RequestInit);
+
+    // Add nextauth params
+    Object.defineProperty(authRequest, 'query', {
+      value: {
+        nextauth: pathname.split('/'),
+        ...Object.fromEntries(url.searchParams)
+      },
+      writable: false
+    });
+
     const response = await handler(authRequest);
-    
-    if (!response) {
-      throw new Error('No response from auth handler');
-    }
-    
     return response;
   } catch (error) {
-    console.error('NextAuth GET Error:', error);
+    console.error('NextAuth Error:', error);
     return NextResponse.json(
       { error: 'Authentication failed' },
       { status: 500 }
@@ -55,24 +42,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const authRequest = await createAuthRequest(request);
-    const response = await handler(authRequest);
-    
-    if (!response) {
-      throw new Error('No response from auth handler');
-    }
-    
-    return response;
-  } catch (error) {
-    console.error('NextAuth POST Error:', error);
-    return NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 500 }
-    );
-  }
-}
+// Export all HTTP methods
+export const GET = auth;
+export const POST = auth;
 
 // Export other methods with proper error handling
 export async function PUT() {

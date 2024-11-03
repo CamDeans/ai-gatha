@@ -22,11 +22,10 @@ export default function SignInForm() {
         email: (formData.get('email') as string).toLowerCase(),
         password: formData.get('password') as string,
         redirect: false,
-        callbackUrl: '/dashboard'
       });
 
       if (!response) {
-        throw new Error('No response from auth server');
+        throw new Error('Authentication failed');
       }
 
       if (response.error) {
@@ -35,7 +34,7 @@ export default function SignInForm() {
       }
 
       if (response.ok) {
-        router.push(response.url || '/dashboard');
+        router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {

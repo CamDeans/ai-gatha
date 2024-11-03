@@ -99,18 +99,14 @@ export const authConfig: AuthOptions = {
       }
       return token;
     },
-    async session({ session, token }): Promise<ExtendedSession> {
-      return {
-        ...session,
-        user: {
-          id: token.id as string,
-          email: token.email as string,
-          name: session.user?.name || null,
-          image: session.user?.image || null
-        }
-      };
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+      }
+      return session;
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development'
+  debug: false // Disable debug in production
 }
