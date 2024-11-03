@@ -31,16 +31,10 @@ async function createAuthRequest(request: NextRequest) {
     method: request.method,
     headers: new Headers(request.headers),
     body,
-    duplex: 'half',
     cache: request.cache,
     credentials: request.credentials,
-    integrity: request.integrity,
-    keepalive: request.keepalive,
     mode: request.mode,
     redirect: request.redirect,
-    referrer: request.referrer,
-    referrerPolicy: request.referrerPolicy,
-    signal: request.signal,
   });
 
   // Add nextauth params to request
