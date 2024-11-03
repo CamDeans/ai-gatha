@@ -39,8 +39,9 @@ export async function POST(req: Request) {
     // Connect to MongoDB with timeout
     const client = await Promise.race([
       clientPromise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database connection timeout')), MONGODB_TIMEOUT)
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout')), MONGODB_TIMEOUT);
+      })
     ]) as MongoClient;
 
     const db = client.db('deansight');
