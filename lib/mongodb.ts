@@ -13,8 +13,10 @@ const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
   maxIdleTimeMS: 60000,
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 20000,
+  connectTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 30000,
+  waitQueueTimeoutMS: 30000,
 }
 
 let client: MongoClient
@@ -35,7 +37,10 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   // In production mode, it's best to not use a global variable.
   client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+  clientPromise = client.connect().catch(error => {
+    console.error('MongoDB connection error:', error)
+    throw error
+  })
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a

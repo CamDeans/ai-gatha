@@ -15,45 +15,70 @@ function getNextAuthParams(url: string) {
   return segments.slice(nextauthIndex);
 }
 
-// Helper function to create request with query
-function createAuthRequest(request: NextRequest) {
-  const nextauthParams = getNextAuthParams(request.url);
-  const searchParams = new URL(request.url).searchParams;
-
-  // Create a new request with the same properties
-  const newRequest = new Request(request.url, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body,
-    cache: request.cache,
-    credentials: request.credentials,
-    integrity: request.integrity,
-    mode: request.mode,
-    redirect: request.redirect,
-  });
-
-  // Add query property
-  Object.defineProperty(newRequest, 'query', {
-    get: () => ({
-      nextauth: nextauthParams,
-      ...Object.fromEntries(searchParams.entries())
-    }),
-    enumerable: true,
-    configurable: true
-  });
-
-  return newRequest;
-}
-
 // Export handlers
 export async function GET(request: NextRequest) {
-  const authRequest = createAuthRequest(request);
-  return handler(authRequest);
+  try {
+    const nextauthParams = getNextAuthParams(request.url);
+    const searchParams = new URL(request.url).searchParams;
+
+    // Create a new request with the same properties
+    const newRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      cache: request.cache,
+      credentials: request.credentials,
+    });
+
+    // Add query property
+    Object.defineProperty(newRequest, 'query', {
+      value: {
+        nextauth: nextauthParams,
+        ...Object.fromEntries(searchParams.entries())
+      },
+      writable: false
+    });
+
+    return await handler(newRequest);
+  } catch (error) {
+    console.error('NextAuth GET Error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Authentication failed' }),
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
-  const authRequest = createAuthRequest(request);
-  return handler(authRequest);
+  try {
+    const nextauthParams = getNextAuthParams(request.url);
+    const searchParams = new URL(request.url).searchParams;
+    const body = await request.text();
+
+    // Create a new request with the same properties
+    const newRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body,
+      duplex: 'half',
+    });
+
+    // Add query property
+    Object.defineProperty(newRequest, 'query', {
+      value: {
+        nextauth: nextauthParams,
+        ...Object.fromEntries(searchParams.entries())
+      },
+      writable: false
+    });
+
+    return await handler(newRequest);
+  } catch (error) {
+    console.error('NextAuth POST Error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Authentication failed' }),
+      { status: 500 }
+    );
+  }
 }
 
 // Export other methods with proper error handling
