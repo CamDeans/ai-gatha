@@ -2,6 +2,12 @@ import type { AuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
+import { ApiError } from "@/lib/api-error"
+
+interface AuthError {
+  message: string;
+  statusCode: number;
+}
 
 export const authConfig: AuthOptions = {
   providers: [
@@ -46,13 +52,13 @@ export const authConfig: AuthOptions = {
           if (error instanceof ApiError) {
             throw new Error(JSON.stringify({
               message: error.message,
-              status: error.statusCode
-            }));
+              statusCode: error.statusCode
+            } as AuthError));
           }
           throw new Error(JSON.stringify({
             message: 'Authentication failed',
-            status: 500
-          }));
+            statusCode: 500
+          } as AuthError));
         }
       }
     })
