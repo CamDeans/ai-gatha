@@ -26,9 +26,16 @@ export default function SignUp() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: AbortSignal.timeout(15000)
       })
 
-      const data = await res.json()
+      let data;
+      try {
+        data = await res.json()
+      } catch (parseError) {
+        console.error('Response parsing error:', parseError)
+        throw new Error('Failed to process server response')
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create account')
@@ -41,7 +48,11 @@ export default function SignUp() {
       }
     } catch (error) {
       console.error('Signup error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to create account')
+      if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+        setError('Request timed out. Please try again.')
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to create account')
+      }
     } finally {
       setIsLoading(false)
     }

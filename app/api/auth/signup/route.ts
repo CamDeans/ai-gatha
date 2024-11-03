@@ -7,23 +7,42 @@ import { hash } from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
 import { ApiError } from '@/lib/api-error';
 
+// Add timeout for MongoDB connection
+const MONGODB_TIMEOUT = 10000; // 10 seconds
+
 export async function POST(req: Request) {
   try {
+    // Add timeout to the request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), MONGODB_TIMEOUT);
+
     const { email, password, name } = await req.json();
 
     // Validate input
     if (!email || !password) {
-      return NextResponse.json(
-        { 
+      clearTimeout(timeoutId);
+      return new NextResponse(
+        JSON.stringify({ 
           success: false,
           error: 'Missing required fields' 
-        },
-        { status: 400 }
+        }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
 
-    // Connect to MongoDB
-    const client = await clientPromise;
+    // Connect to MongoDB with timeout
+    const client = await Promise.race([
+      clientPromise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), MONGODB_TIMEOUT)
+      )
+    ]);
+
     const db = client.db('deansight');
 
     // Check if user already exists
@@ -32,12 +51,18 @@ export async function POST(req: Request) {
       .findOne({ email: email.toLowerCase() });
 
     if (existingUser) {
-      return NextResponse.json(
-        { 
+      clearTimeout(timeoutId);
+      return new NextResponse(
+        JSON.stringify({ 
           success: false,
           error: 'Email already registered' 
-        },
-        { status: 400 }
+        }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
 
@@ -52,21 +77,66 @@ export async function POST(req: Request) {
       createdAt: new Date(),
     });
 
-    return NextResponse.json(
-      { 
+    clearTimeout(timeoutId);
+    return new NextResponse(
+      JSON.stringify({ 
         success: true,
         message: 'Account created successfully' 
-      },
-      { status: 201 }
+      }),
+      { 
+        status: 201,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     );
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { 
+    
+    // Handle specific error types
+    if (error instanceof ApiError) {
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false,
+          error: error.message 
+        }),
+        { 
+          status: error.statusCode,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+    }
+
+    // Handle timeout errors
+    if (error.name === 'AbortError' || error.message === 'Database connection timeout') {
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false,
+          error: 'Request timed out. Please try again.' 
+        }),
+        { 
+          status: 504,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+    }
+
+    // Generic error response
+    return new NextResponse(
+      JSON.stringify({ 
         success: false,
         error: 'Failed to create account' 
-      },
-      { status: 500 }
+      }),
+      { 
+        status: 500,
+        headers: {
+            'Content-Type': 'application/json',
+        }
+      }
     );
   }
 } 
