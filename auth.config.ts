@@ -14,7 +14,7 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            return null;
+            throw new ApiError('Missing credentials', 400);
           }
 
           const client = await clientPromise;
@@ -27,13 +27,13 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user) {
-            return null;
+            throw new ApiError('Invalid credentials', 401);
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            return null;
+            throw new ApiError('Invalid credentials', 401);
           }
 
           return {
@@ -43,7 +43,16 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          return null;
+          if (error instanceof ApiError) {
+            throw new Error(JSON.stringify({
+              message: error.message,
+              status: error.statusCode
+            }));
+          }
+          throw new Error(JSON.stringify({
+            message: 'Authentication failed',
+            status: 500
+          }));
         }
       }
     })

@@ -21,16 +21,24 @@ export default function SignInForm() {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
         redirect: false,
+        callbackUrl: '/dashboard'
       });
 
       if (response?.error) {
-        setError('Invalid email or password');
+        try {
+          // Try to parse the error message as JSON
+          const errorData = JSON.parse(response.error);
+          setError(errorData.message || 'Authentication failed');
+        } catch {
+          // If parsing fails, use the error message directly
+          setError(response.error || 'Authentication failed');
+        }
         return;
       }
 
       if (response?.ok) {
-        router.push('/dashboard'); // or wherever you want to redirect after login
-        router.refresh(); // refresh the page to update the session
+        router.push(response.url || '/dashboard');
+        router.refresh();
       }
     } catch (error) {
       setError('An unexpected error occurred');

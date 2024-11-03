@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
+import { ApiError } from '@/lib/api-error';
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +14,10 @@ export async function POST(req: Request) {
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { 
+          success: false,
+          error: 'Missing required fields' 
+        },
         { status: 400 }
       );
     }
@@ -25,11 +29,14 @@ export async function POST(req: Request) {
     // Check if user already exists
     const existingUser = await db
       .collection('users')
-      .findOne({ email });
+      .findOne({ email: email.toLowerCase() });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { 
+          success: false,
+          error: 'Email already registered' 
+        },
         { status: 400 }
       );
     }
@@ -38,23 +45,27 @@ export async function POST(req: Request) {
     const hashedPassword = await hash(password, 12);
 
     // Create new user
-    const result = await db
-      .collection('users')
-      .insertOne({
-        email,
-        password: hashedPassword,
-        name: name || null,
-        createdAt: new Date(),
-      });
+    await db.collection('users').insertOne({
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      name: name || null,
+      createdAt: new Date(),
+    });
 
     return NextResponse.json(
-      { message: 'User created successfully' },
+      { 
+        success: true,
+        message: 'Account created successfully' 
+      },
       { status: 201 }
     );
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { 
+        success: false,
+        error: 'Failed to create account' 
+      },
       { status: 500 }
     );
   }

@@ -28,14 +28,20 @@ export default function SignUp() {
         body: JSON.stringify({ email, password }),
       })
 
+      const data = await res.json()
+
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to sign up')
+        throw new Error(data.error || 'Failed to create account')
       }
 
-      router.push('/auth/signin?registered=true')
+      if (data.success) {
+        router.push('/auth/signin?registered=true')
+      } else {
+        throw new Error(data.error || 'Failed to create account')
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to sign up')
+      console.error('Signup error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to create account')
     } finally {
       setIsLoading(false)
     }
@@ -44,7 +50,7 @@ export default function SignUp() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {error && (
-        <div className="text-sm text-destructive text-center">
+        <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
           {error}
         </div>
       )}
@@ -73,6 +79,7 @@ export default function SignUp() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+            minLength={6}
           />
         </div>
       </div>
