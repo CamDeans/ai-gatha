@@ -1,7 +1,8 @@
-import type { AuthOptions } from "next-auth"
+import type { AuthOptions, Session, User } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
+import { JWT } from "next-auth/jwt"
 
 export const authConfig: AuthOptions = {
   providers: [
@@ -20,7 +21,7 @@ export const authConfig: AuthOptions = {
           placeholder: "Your password"
         }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
             return null;
@@ -74,29 +75,21 @@ export const authConfig: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.email = token.email as string;
       }
       return session;
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
-  events: {
-    async signIn({ user }) {
-      console.log('User signed in:', user.email);
-    },
-    async signOut({ token }) {
-      console.log('User signed out:', token.email);
-    }
-  }
+  debug: process.env.NODE_ENV === 'development'
 }
