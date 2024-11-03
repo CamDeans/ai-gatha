@@ -4,21 +4,45 @@
 import NextAuth from 'next-auth';
 import { authConfig } from '@/auth.config';
 import { NextResponse } from 'next/server';
+import type { NextAuthConfig } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+import type { Session } from 'next-auth';
 
 // Create handler with timeout
 const TIMEOUT = 10000; // 10 seconds
 
+// Create handler with proper types
 const handler = NextAuth({
   ...authConfig,
-  async callbacks(params) {
-    // Add timeout to all callbacks
-    const result = await Promise.race([
-      authConfig.callbacks?.[params.type]?.(params),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT)
-      )
-    ]);
-    return result;
+  callbacks: {
+    async jwt({ token, user, account, profile, trigger }) {
+      try {
+        const result = await Promise.race([
+          authConfig.callbacks?.jwt?.({ token, user, account, profile, trigger }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT)
+          )
+        ]);
+        return result || token;
+      } catch (error) {
+        console.error('JWT callback error:', error);
+        return token;
+      }
+    },
+    async session({ session, token, user, trigger }) {
+      try {
+        const result = await Promise.race([
+          authConfig.callbacks?.session?.({ session, token, user, trigger }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT)
+          )
+        ]);
+        return result || session;
+      } catch (error) {
+        console.error('Session callback error:', error);
+        return session;
+      }
+    }
   }
 });
 
