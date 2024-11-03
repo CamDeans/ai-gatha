@@ -3,7 +3,7 @@
  */
 import NextAuth from 'next-auth';
 import { authConfig } from '@/auth.config';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Create handler
 const handler = NextAuth(authConfig);
@@ -15,26 +15,11 @@ async function createAuthRequest(request: NextRequest) {
     .split('/')
     .filter(param => param !== '' && param !== 'api' && param !== 'auth');
 
-  let body = null;
-  if (request.body) {
-    try {
-      const text = await request.text();
-      if (text) {
-        body = text;
-      }
-    } catch (error) {
-      console.error('Error reading request body:', error);
-    }
-  }
-
+  // Create a new request with minimal properties
   const authRequest = new Request(url, {
     method: request.method,
     headers: new Headers(request.headers),
-    body,
-    cache: request.cache,
-    credentials: request.credentials,
-    mode: request.mode,
-    redirect: request.redirect,
+    body: request.body
   });
 
   // Add nextauth params to request
@@ -50,19 +35,22 @@ async function createAuthRequest(request: NextRequest) {
   return authRequest;
 }
 
-// Export handlers
+// Export handlers with error handling
 export async function GET(request: NextRequest) {
   try {
     const authRequest = await createAuthRequest(request);
-    return await handler(authRequest);
+    const response = await handler(authRequest);
+    
+    if (!response) {
+      throw new Error('No response from auth handler');
+    }
+    
+    return response;
   } catch (error) {
     console.error('NextAuth GET Error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Authentication failed' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+    return NextResponse.json(
+      { error: 'Authentication failed' },
+      { status: 500 }
     );
   }
 }
@@ -70,41 +58,57 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const authRequest = await createAuthRequest(request);
-    return await handler(authRequest);
+    const response = await handler(authRequest);
+    
+    if (!response) {
+      throw new Error('No response from auth handler');
+    }
+    
+    return response;
   } catch (error) {
     console.error('NextAuth POST Error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Authentication failed' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+    return NextResponse.json(
+      { error: 'Authentication failed' },
+      { status: 500 }
     );
   }
 }
 
 // Export other methods with proper error handling
-export async function PUT(request: NextRequest) {
-  return new Response(null, { status: 405 });
+export async function PUT() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  );
 }
 
-export async function PATCH(request: NextRequest) {
-  return new Response(null, { status: 405 });
+export async function PATCH() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  );
 }
 
-export async function DELETE(request: NextRequest) {
-  return new Response(null, { status: 405 });
+export async function DELETE() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  );
 }
 
-export async function HEAD(request: NextRequest) {
-  return new Response(null, { status: 405 });
+export async function HEAD() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  );
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new Response(null, { 
     status: 200,
     headers: {
-      'Allow': 'GET, POST'
+      'Allow': 'GET, POST',
+      'Content-Length': '0'
     }
   });
 }
