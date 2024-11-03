@@ -25,13 +25,17 @@ export default function SignInForm() {
         callbackUrl: '/dashboard'
       });
 
-      if (response?.error) {
+      if (!response) {
+        throw new Error('No response from auth server');
+      }
+
+      if (response.error) {
         setError('Invalid email or password');
         return;
       }
 
-      if (response?.ok) {
-        router.push('/dashboard');
+      if (response.ok) {
+        router.push(response.url || '/dashboard');
         router.refresh();
       }
     } catch (error) {

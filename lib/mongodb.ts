@@ -10,12 +10,17 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI
 const options = {
-  connectTimeoutMS: 10000, // 10 seconds
+  ssl: true,
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  retryWrites: true,
+  minPoolSize: 5,
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 10000,
-  serverSelectionTimeoutMS: 10000,
 }
 
-let client
+let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
@@ -36,10 +41,6 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect()
 }
 
-// Add error handling
-clientPromise.catch(error => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1);
-});
-
-export default clientPromise 
+// Export a module-scoped MongoClient promise. By doing this in a
+// separate module, the client can be shared across functions.
+export default clientPromise

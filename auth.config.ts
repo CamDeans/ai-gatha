@@ -6,18 +6,32 @@ import clientPromise from "@/lib/mongodb"
 export const authConfig: AuthOptions = {
   providers: [
     Credentials({
+      id: 'credentials',
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { 
+          label: "Email", 
+          type: "email",
+          placeholder: "example@email.com"
+        },
+        password: { 
+          label: "Password", 
+          type: "password",
+          placeholder: "Your password"
+        }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         try {
           if (!credentials?.email || !credentials?.password) {
             return null;
           }
 
           const client = await clientPromise;
+          if (!client) {
+            console.error('Failed to connect to MongoDB');
+            return null;
+          }
+
           const db = client.db("deansight");
           
           const user = await db
@@ -27,12 +41,14 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user || !user.password) {
+            console.log('User not found or missing password');
             return null;
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
+            console.log('Invalid password');
             return null;
           }
 
@@ -74,5 +90,13 @@ export const authConfig: AuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false // Disable debug mode in production
+  debug: process.env.NODE_ENV === 'development',
+  events: {
+    async signIn({ user }) {
+      console.log('User signed in:', user.email);
+    },
+    async signOut({ token }) {
+      console.log('User signed out:', token.email);
+    }
+  }
 }
