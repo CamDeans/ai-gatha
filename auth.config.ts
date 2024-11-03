@@ -1,8 +1,20 @@
 import type { AuthOptions, Session, User } from "next-auth"
+import type { JWT } from "next-auth/jwt"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
-import { JWT } from "next-auth/jwt"
+
+interface ExtendedUser extends User {
+  id: string;
+}
+
+interface ExtendedSession extends Session {
+  user?: {
+    id: string;
+    email: string;
+    name?: string | null;
+  }
+}
 
 export const authConfig: AuthOptions = {
   providers: [
@@ -28,11 +40,6 @@ export const authConfig: AuthOptions = {
           }
 
           const client = await clientPromise;
-          if (!client) {
-            console.error('Failed to connect to MongoDB');
-            return null;
-          }
-
           const db = client.db("deansight");
           
           const user = await db
@@ -42,14 +49,12 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user || !user.password) {
-            console.log('User not found or missing password');
             return null;
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            console.log('Invalid password');
             return null;
           }
 
@@ -75,14 +80,14 @@ export const authConfig: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
+    async session({ session, token }): Promise<ExtendedSession> {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;

@@ -5,37 +5,41 @@ import NextAuth from 'next-auth';
 import { authConfig } from '@/auth.config';
 import { NextRequest } from 'next/server';
 
-// Create a single handler instance
+// Create handler
 const handler = NextAuth(authConfig);
 
-// Export GET and POST with proper request handling
-export async function GET(request: NextRequest) {
+// Helper function to create a proper request object
+function createAuthRequest(request: NextRequest) {
   const url = new URL(request.url);
-  const nextauthUrl = url.pathname.replace('/api/auth/', '');
+  const pathname = url.pathname.replace('/api/auth/', '');
   
-  return handler(
-    new Request(new URL(nextauthUrl, request.url), {
-      method: request.method,
-      headers: request.headers,
-      body: request.body
-    })
-  );
+  return new Request(url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    duplex: 'half',
+    cache: request.cache,
+    credentials: request.credentials,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    mode: request.mode,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    signal: request.signal,
+  });
+}
+
+// Export handlers
+export async function GET(request: NextRequest) {
+  return handler(createAuthRequest(request));
 }
 
 export async function POST(request: NextRequest) {
-  const url = new URL(request.url);
-  const nextauthUrl = url.pathname.replace('/api/auth/', '');
-  
-  return handler(
-    new Request(new URL(nextauthUrl, request.url), {
-      method: request.method,
-      headers: request.headers,
-      body: request.body
-    })
-  );
+  return handler(createAuthRequest(request));
 }
 
-// Export all required HTTP methods
+// Export other methods
 export const PUT = handler;
 export const PATCH = handler;
 export const DELETE = handler;
