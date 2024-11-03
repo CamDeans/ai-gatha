@@ -57,10 +57,12 @@ export async function POST(request: NextRequest) {
     // Create a new request with the same properties
     const newRequest = new Request(request.url, {
       method: request.method,
-      headers: request.headers,
-      body,
-      duplex: 'half',
-    });
+      headers: new Headers({
+        'Content-Type': 'application/json',
+        ...Object.fromEntries(request.headers)
+      }),
+      body
+    } as RequestInit);
 
     // Add query property
     Object.defineProperty(newRequest, 'query', {
