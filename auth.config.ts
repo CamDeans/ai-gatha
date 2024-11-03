@@ -2,7 +2,6 @@ import type { AuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
-import { ApiError } from "@/lib/api-error"
 
 export const authConfig: AuthOptions = {
   providers: [
@@ -14,7 +13,7 @@ export const authConfig: AuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error('Missing credentials');
         }
 
         try {
@@ -28,13 +27,13 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user) {
-            return null;
+            throw new Error('Invalid credentials');
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            return null;
+            throw new Error('Invalid credentials');
           }
 
           return {
@@ -44,7 +43,11 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          return null;
+          // Convert MongoDB errors to authentication errors
+          if (error instanceof Error) {
+            throw new Error(error.message);
+          }
+          throw new Error('Authentication failed');
         }
       }
     })
@@ -75,5 +78,16 @@ export const authConfig: AuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development'
+  debug: process.env.NODE_ENV === 'development',
+  logger: {
+    error: (code, metadata) => {
+      console.error('NextAuth Error:', code, metadata)
+    },
+    warn: (code) => {
+      console.warn('NextAuth Warning:', code)
+    },
+    debug: (code, metadata) => {
+      console.log('NextAuth Debug:', code, metadata)
+    }
+  }
 }

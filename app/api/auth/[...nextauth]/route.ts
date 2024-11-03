@@ -9,26 +9,47 @@ import { NextResponse } from 'next/server';
 const handler = NextAuth(authConfig);
 
 // Export the handler directly for both GET and POST
-export async function GET(req: Request) {
-  try {
-    return await handler(req);
-  } catch (error) {
-    console.error('NextAuth GET Error:', error);
-    return NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 500 }
-    );
-  }
+export async function GET(request: Request) {
+  return handler(request);
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    return await handler(req);
+    // Check if it's a sign-in request
+    const body = await request.clone().json();
+    if (body?.email && body?.password) {
+      // Add proper headers for authentication requests
+      const response = await handler(new Request(request.url, {
+        method: request.method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(body)
+      }));
+
+      // Ensure proper response format
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: 'Invalid credentials' },
+          { status: 401 }
+        );
+      }
+      return response;
+    }
+
+    // Handle other NextAuth requests
+    return handler(request);
   } catch (error) {
     console.error('NextAuth POST Error:', error);
     return NextResponse.json(
       { error: 'Authentication failed' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
   }
 }
