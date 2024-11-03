@@ -22,26 +22,28 @@ export default function SignUp() {
     setError(null)
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ email, password }),
         signal: controller.signal
       });
 
-      let data;
-      const textResponse = await res.text(); // Get response as text first
-
-      try {
-        data = JSON.parse(textResponse); // Try to parse as JSON
-      } catch (parseError) {
-        console.error('Raw response:', textResponse);
-        console.error('Parse error:', parseError);
-        throw new Error('Invalid server response');
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        if (res.status === 504) {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw new Error('Invalid response from server');
       }
+
+      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create account');
@@ -59,7 +61,7 @@ export default function SignUp() {
         if (error.name === 'AbortError') {
           setError('Request timed out. Please try again.');
         } else {
-          setError(error.message || 'Failed to create account');
+          setError(error.message);
         }
       } else {
         setError('An unexpected error occurred');
