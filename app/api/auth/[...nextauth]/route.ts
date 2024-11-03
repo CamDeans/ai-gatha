@@ -4,47 +4,9 @@
 import NextAuth from 'next-auth';
 import { authConfig } from '@/auth.config';
 import { NextResponse } from 'next/server';
-import type { NextAuthConfig } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
-import type { Session } from 'next-auth';
 
-// Create handler with timeout
-const TIMEOUT = 10000; // 10 seconds
-
-// Create handler with proper types
-const handler = NextAuth({
-  ...authConfig,
-  callbacks: {
-    async jwt({ token, user, account, profile, trigger }) {
-      try {
-        const result = await Promise.race([
-          authConfig.callbacks?.jwt?.({ token, user, account, profile, trigger }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT)
-          )
-        ]);
-        return result || token;
-      } catch (error) {
-        console.error('JWT callback error:', error);
-        return token;
-      }
-    },
-    async session({ session, token, user, trigger }) {
-      try {
-        const result = await Promise.race([
-          authConfig.callbacks?.session?.({ session, token, user, trigger }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT)
-          )
-        ]);
-        return result || session;
-      } catch (error) {
-        console.error('Session callback error:', error);
-        return session;
-      }
-    }
-  }
-});
+// Create handler
+const handler = NextAuth(authConfig);
 
 // Helper function for error responses
 function handleError(error: unknown) {
@@ -61,12 +23,10 @@ function handleError(error: unknown) {
 // Export handlers with error handling
 export async function GET(req: Request) {
   try {
-    const response = await Promise.race([
-      handler(req),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), TIMEOUT)
-      )
-    ]);
+    const response = await handler(req);
+    if (!response) {
+      throw new Error('No response from auth handler');
+    }
     return response;
   } catch (error) {
     return handleError(error);
@@ -75,12 +35,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const response = await Promise.race([
-      handler(req),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), TIMEOUT)
-      )
-    ]);
+    const response = await handler(req);
+    if (!response) {
+      throw new Error('No response from auth handler');
+    }
     return response;
   } catch (error) {
     return handleError(error);
