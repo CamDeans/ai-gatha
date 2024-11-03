@@ -7,12 +7,14 @@ import { hash } from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
 import { MongoClient } from 'mongodb';
 
-// Reduce timeout to match Vercel's limits
-const MONGODB_TIMEOUT = 8000; // 8 seconds
+// Shorter timeout for individual operations
+const OPERATION_TIMEOUT = 5000; // 5 seconds
 
 export async function POST(req: Request) {
+  let client: MongoClient | null = null;
+
   try {
-    // Parse request body
+    // Parse request body first
     const { email, password, name } = await req.json();
 
     if (!email || !password) {
@@ -25,15 +27,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // Get MongoDB client - with a shorter timeout
-    let client: MongoClient;
+    // Connect to MongoDB
     try {
-      client = await clientPromise;
+      client = await Promise.race([
+        clientPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout')), OPERATION_TIMEOUT)
+        )
+      ]) as MongoClient;
     } catch (dbError) {
       console.error('Database connection error:', dbError);
       return NextResponse.json({ 
         success: false,
-        error: 'Database connection failed' 
+        error: 'Service temporarily unavailable' 
       }, { 
         status: 503,
         headers: { 'Content-Type': 'application/json' }
@@ -41,12 +47,13 @@ export async function POST(req: Request) {
     }
 
     const db = client.db('deansight');
+    const usersCollection = db.collection('users');
 
-    // Check for existing user with timeout
+    // Check for existing user - with shorter timeout
     const existingUser = await Promise.race([
-      db.collection('users').findOne({ email: email.toLowerCase() }),
+      usersCollection.findOne({ email: email.toLowerCase() }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database operation timeout')), MONGODB_TIMEOUT)
+        setTimeout(() => reject(new Error('Operation timeout')), OPERATION_TIMEOUT)
       )
     ]);
 
@@ -60,19 +67,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // Hash password with a lower cost factor for faster processing
-    const hashedPassword = await hash(password, 10); // Reduced from 12 to 10
+    // Hash password with lower cost for speed
+    const hashedPassword = await hash(password, 8); // Reduced from 10 to 8 for speed
 
-    // Create user with timeout
+    // Create user - with shorter timeout
     await Promise.race([
-      db.collection('users').insertOne({
+      usersCollection.insertOne({
         email: email.toLowerCase(),
         password: hashedPassword,
         name: name || null,
         createdAt: new Date(),
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database operation timeout')), MONGODB_TIMEOUT)
+        setTimeout(() => reject(new Error('Operation timeout')), OPERATION_TIMEOUT)
       )
     ]);
 
@@ -87,19 +94,20 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Registration error:', error);
 
-    // Handle specific error types
     if (error instanceof Error) {
+      // Handle timeout errors
       if (error.message.includes('timeout')) {
         return NextResponse.json({ 
           success: false,
-          error: 'Operation timed out. Please try again.' 
+          error: 'Service is busy. Please try again.' 
         }, { 
-          status: 504,
+          status: 503,
           headers: { 'Content-Type': 'application/json' }
         });
       }
     }
 
+    // Generic error response
     return NextResponse.json({ 
       success: false,
       error: 'Failed to create account' 

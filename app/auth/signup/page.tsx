@@ -21,8 +21,14 @@ export default function SignUp() {
     setIsLoading(true)
     setError(null)
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      try {
+        controller.abort('Request timeout')
+      } catch (e) {
+        console.error('Abort error:', e)
+      }
+    }, 15000)
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -31,44 +37,53 @@ export default function SignUp() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email: email.toLowerCase(),
+          password 
+        }),
         signal: controller.signal
-      });
+      })
 
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        if (res.status === 504) {
-          throw new Error('Request timed out. Please try again.');
-        }
-        throw new Error('Invalid response from server');
+      if (controller.signal.aborted) {
+        throw new Error('Request timed out')
       }
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type')
+      if (!contentType?.includes('application/json')) {
+        const text = await res.text()
+        console.error('Non-JSON response:', text)
+        throw new Error('Invalid server response')
+      }
+
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create account');
+        throw new Error(data.error || 'Failed to create account')
       }
 
       if (data.success) {
-        router.push('/auth/signin?registered=true');
+        router.push('/auth/signin?registered=true')
+        router.refresh()
       } else {
-        throw new Error(data.error || 'Failed to create account');
+        throw new Error(data.error || 'Failed to create account')
       }
     } catch (error: unknown) {
-      console.error('Signup error:', error);
+      console.error('Signup error:', error)
       
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          setError('Request timed out. Please try again.');
+        if (error.name === 'AbortError' || error.message === 'Request timed out') {
+          setError('Request timed out. Please try again later.')
+        } else if (error.message.includes('fetch failed')) {
+          setError('Network error. Please check your connection.')
         } else {
-          setError(error.message);
+          setError(error.message)
         }
       } else {
-        setError('An unexpected error occurred');
+        setError('An unexpected error occurred')
       }
     } finally {
-      clearTimeout(timeoutId);
-      setIsLoading(false);
+      clearTimeout(timeoutId)
+      setIsLoading(false)
     }
   }
 
