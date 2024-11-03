@@ -14,7 +14,7 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            throw new Error('Missing credentials')
+            return null;
           }
 
           const client = await clientPromise;
@@ -27,13 +27,13 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user) {
-            throw new Error('No user found')
+            return null;
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            throw new Error('Invalid password')
+            return null;
           }
 
           return {
@@ -43,7 +43,7 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          throw new Error(error instanceof Error ? error.message : 'Authentication failed');
+          return null;
         }
       }
     })
