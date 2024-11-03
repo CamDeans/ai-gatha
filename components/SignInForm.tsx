@@ -21,28 +21,24 @@ export default function SignInForm() {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
         redirect: false,
-        callbackUrl: '/dashboard'
       });
 
-      if (response?.error) {
-        try {
-          // Try to parse the error message as JSON
-          const errorData = JSON.parse(response.error);
-          setError(errorData.message || 'Authentication failed');
-        } catch {
-          // If parsing fails, use the error message directly
-          setError(response.error || 'Authentication failed');
-        }
+      if (!response) {
+        throw new Error('No response from authentication server');
+      }
+
+      if (response.error) {
+        setError(response.error);
         return;
       }
 
-      if (response?.ok) {
-        router.push(response.url || '/dashboard');
+      if (response.ok) {
+        router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {
-      setError('An unexpected error occurred');
       console.error('Sign in error:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }

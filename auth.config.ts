@@ -50,15 +50,9 @@ export const authConfig: AuthOptions = {
         } catch (error) {
           console.error('Auth error:', error);
           if (error instanceof ApiError) {
-            throw new Error(JSON.stringify({
-              message: error.message,
-              statusCode: error.statusCode
-            } as AuthError));
+            throw new Error(error.message);
           }
-          throw new Error(JSON.stringify({
-            message: 'Authentication failed',
-            statusCode: 500
-          } as AuthError));
+          throw new Error('Authentication failed');
         }
       }
     })
@@ -88,5 +82,6 @@ export const authConfig: AuthOptions = {
       return session;
     }
   },
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development'
 }
