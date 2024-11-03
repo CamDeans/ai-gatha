@@ -4,11 +4,6 @@ import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
 import { ApiError } from "@/lib/api-error"
 
-interface AuthError {
-  message: string;
-  statusCode: number;
-}
-
 export const authConfig: AuthOptions = {
   providers: [
     Credentials({
@@ -18,11 +13,11 @@ export const authConfig: AuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        try {
-          if (!credentials?.email || !credentials?.password) {
-            throw new ApiError('Missing credentials', 400);
-          }
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
+        try {
           const client = await clientPromise;
           const db = client.db("deansight");
           
@@ -33,13 +28,13 @@ export const authConfig: AuthOptions = {
             });
 
           if (!user) {
-            throw new ApiError('Invalid credentials', 401);
+            return null;
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            throw new ApiError('Invalid credentials', 401);
+            return null;
           }
 
           return {
@@ -49,10 +44,7 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          if (error instanceof ApiError) {
-            throw new Error(error.message);
-          }
-          throw new Error('Authentication failed');
+          return null;
         }
       }
     })

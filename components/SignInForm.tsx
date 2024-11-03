@@ -2,10 +2,11 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,27 +19,24 @@ export default function SignInForm() {
     
     try {
       const response = await signIn('credentials', {
-        email: formData.get('email') as string,
+        email: (formData.get('email') as string).toLowerCase(),
         password: formData.get('password') as string,
         redirect: false,
+        callbackUrl: '/dashboard'
       });
 
-      if (!response) {
-        throw new Error('No response from authentication server');
-      }
-
-      if (response.error) {
-        setError(response.error);
+      if (response?.error) {
+        setError('Invalid email or password');
         return;
       }
 
-      if (response.ok) {
+      if (response?.ok) {
         router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      setError('An unexpected error occurred. Please try again.');
+      setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -49,6 +47,11 @@ export default function SignInForm() {
       {error && (
         <div className="bg-red-50 text-red-500 p-3 rounded">
           {error}
+        </div>
+      )}
+      {searchParams?.get('registered') && (
+        <div className="bg-green-50 text-green-500 p-3 rounded">
+          Account created successfully. Please sign in.
         </div>
       )}
       <div>
