@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
 import { ApiError } from '@/lib/api-error';
+import { MongoClient } from 'mongodb';
 
 // Add timeout for MongoDB connection
 const MONGODB_TIMEOUT = 10000; // 10 seconds
@@ -40,8 +41,7 @@ export async function POST(req: Request) {
       clientPromise,
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Database connection timeout')), MONGODB_TIMEOUT)
-      )
-    ]);
+    ]) as MongoClient;
 
     const db = client.db('deansight');
 
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         }
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Registration error:', error);
     
     // Handle specific error types
@@ -110,7 +110,10 @@ export async function POST(req: Request) {
     }
 
     // Handle timeout errors
-    if (error.name === 'AbortError' || error.message === 'Database connection timeout') {
+    if (
+      error instanceof Error && 
+      (error.name === 'AbortError' || error.message === 'Database connection timeout')
+    ) {
       return new NextResponse(
         JSON.stringify({ 
           success: false,
@@ -134,7 +137,7 @@ export async function POST(req: Request) {
       { 
         status: 500,
         headers: {
-            'Content-Type': 'application/json',
+          'Content-Type': 'application/json',
         }
       }
     );
