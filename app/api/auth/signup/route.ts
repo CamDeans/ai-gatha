@@ -8,69 +8,58 @@ import clientPromise from '@/lib/mongodb';
 import { ApiError } from '@/lib/api-error';
 import { MongoClient } from 'mongodb';
 
-// Add timeout for MongoDB connection
-const MONGODB_TIMEOUT = 10000; // 10 seconds
+const MONGODB_TIMEOUT = 30000; // Increase timeout to 30 seconds for production
 
 export async function POST(req: Request) {
+  let timeoutId: NodeJS.Timeout | null = null;
+
   try {
-    // Add timeout to the request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), MONGODB_TIMEOUT);
+    // Parse request body first to fail fast if invalid
+    const body = await req.json();
+    const { email, password, name } = body;
 
-    const { email, password, name } = await req.json();
-
-    // Validate input
     if (!email || !password) {
-      clearTimeout(timeoutId);
-      return new NextResponse(
-        JSON.stringify({ 
-          success: false,
-          error: 'Missing required fields' 
-        }),
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      return NextResponse.json({ 
+        success: false,
+        error: 'Missing required fields' 
+      }, { 
+        status: 400 
+      });
     }
+
+    // Set up timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Operation timed out'));
+      }, MONGODB_TIMEOUT);
+    });
 
     // Connect to MongoDB with timeout
     const client = await Promise.race([
       clientPromise,
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Database connection timeout')), MONGODB_TIMEOUT);
-      })
+      timeoutPromise
     ]) as MongoClient;
 
     const db = client.db('deansight');
 
-    // Check if user already exists
+    // Check for existing user
     const existingUser = await db
       .collection('users')
       .findOne({ email: email.toLowerCase() });
 
     if (existingUser) {
-      clearTimeout(timeoutId);
-      return new NextResponse(
-        JSON.stringify({ 
-          success: false,
-          error: 'Email already registered' 
-        }),
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      return NextResponse.json({ 
+        success: false,
+        error: 'Email already registered' 
+      }, { 
+        status: 400 
+      });
     }
 
     // Hash password
     const hashedPassword = await hash(password, 12);
 
-    // Create new user
+    // Create user
     await db.collection('users').insertOne({
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -78,69 +67,45 @@ export async function POST(req: Request) {
       createdAt: new Date(),
     });
 
-    clearTimeout(timeoutId);
-    return new NextResponse(
-      JSON.stringify({ 
-        success: true,
-        message: 'Account created successfully' 
-      }),
-      { 
-        status: 201,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-  } catch (error: unknown) {
-    console.error('Registration error:', error);
-    
-    // Handle specific error types
-    if (error instanceof ApiError) {
-      return new NextResponse(
-        JSON.stringify({ 
-          success: false,
-          error: error.message 
-        }),
-        { 
-          status: error.statusCode,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-    }
+    return NextResponse.json({ 
+      success: true,
+      message: 'Account created successfully' 
+    }, { 
+      status: 201 
+    });
 
-    // Handle timeout errors
-    if (
-      error instanceof Error && 
-      (error.name === 'AbortError' || error.message === 'Database connection timeout')
-    ) {
-      return new NextResponse(
-        JSON.stringify({ 
+  } catch (error) {
+    console.error('Registration error:', error);
+
+    // Clear timeout if it exists
+    if (timeoutId) clearTimeout(timeoutId);
+
+    // Handle different types of errors
+    if (error instanceof Error) {
+      if (error.message === 'Operation timed out') {
+        return NextResponse.json({ 
           success: false,
           error: 'Request timed out. Please try again.' 
-        }),
-        { 
-          status: 504,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-    }
+        }, { 
+          status: 504 
+        });
+      }
 
-    // Generic error response
-    return new NextResponse(
-      JSON.stringify({ 
+      return NextResponse.json({ 
         success: false,
         error: 'Failed to create account' 
-      }),
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    );
+      }, { 
+        status: 500 
+      });
+    }
+
+    return NextResponse.json({ 
+      success: false,
+      error: 'An unexpected error occurred' 
+    }, { 
+      status: 500 
+    });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 } 
