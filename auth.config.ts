@@ -12,11 +12,11 @@ export const authConfig: AuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Missing credentials');
-        }
-
         try {
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
+
           const client = await clientPromise;
           const db = client.db("deansight");
           
@@ -26,14 +26,14 @@ export const authConfig: AuthOptions = {
               email: credentials.email.toLowerCase()
             });
 
-          if (!user) {
-            throw new Error('Invalid credentials');
+          if (!user || !user.password) {
+            return null;
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            throw new Error('Invalid credentials');
+            return null;
           }
 
           return {
@@ -43,11 +43,7 @@ export const authConfig: AuthOptions = {
           }
         } catch (error) {
           console.error('Auth error:', error);
-          // Convert MongoDB errors to authentication errors
-          if (error instanceof Error) {
-            throw new Error(error.message);
-          }
-          throw new Error('Authentication failed');
+          return null;
         }
       }
     })
@@ -78,16 +74,5 @@ export const authConfig: AuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
-  logger: {
-    error: (code, metadata) => {
-      console.error('NextAuth Error:', code, metadata)
-    },
-    warn: (code) => {
-      console.warn('NextAuth Warning:', code)
-    },
-    debug: (code, metadata) => {
-      console.log('NextAuth Debug:', code, metadata)
-    }
-  }
+  debug: false // Disable debug mode in production
 }
