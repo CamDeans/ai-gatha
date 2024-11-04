@@ -10,15 +10,15 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Updated options to remove conflicting TLS settings
+// Updated options with better timeout handling
 const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
   maxIdleTimeMS: 60000,
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 20000,
-  serverSelectionTimeoutMS: 10000,
-  waitQueueTimeoutMS: 10000,
+  connectTimeoutMS: 5000,
+  socketTimeoutMS: 10000,
+  serverSelectionTimeoutMS: 5000,
+  waitQueueTimeoutMS: 5000,
   ssl: true,
   tls: true,
   retryWrites: true,
@@ -51,8 +51,14 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       }
     });
 
-    const client = new MongoClient(uri, options);
-    cachedClient = await client.connect();
+    // Add connection timeout
+    const connectionPromise = new MongoClient(uri, options).connect();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+    });
+
+    // Race between connection and timeout
+    cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
     
     // Test the connection
     await cachedClient.db().command({ ping: 1 });
@@ -61,7 +67,18 @@ export default async function connectToDatabase(): Promise<MongoClient> {
     return cachedClient;
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    cachedClient = null; // Reset cached client on error
+    // Clear cached client on error
+    cachedClient = null;
+    
+    // Throw a more specific error
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        throw new Error('MongoDB connection timeout. Please try again.');
+      }
+      if (error.message.includes('authentication failed')) {
+        throw new Error('MongoDB authentication failed. Check credentials.');
+      }
+    }
     throw error;
   }
 }
