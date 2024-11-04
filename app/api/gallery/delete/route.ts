@@ -1,51 +1,50 @@
-import { NextResponse } from 'next/server'
-import { auth } from "@/auth"
-import clientPromise from '@/lib/mongodb'
-import { ObjectId } from 'mongodb'
+import { NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
+import connectToDatabase from '@/lib/mongodb';
 
-export async function DELETE(req: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const session = await auth()
+    const id = params.id;
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid ID' 
+      }, { 
+        status: 400 
+      });
     }
 
-    const { imageId } = await req.json()
-
-    if (!imageId) {
-      return NextResponse.json(
-        { error: 'Image ID is required' },
-        { status: 400 }
-      )
-    }
-
-    const client = await clientPromise
-    const db = client.db('deansight')
+    const client = await connectToDatabase();
+    const db = client.db();
     
-    const result = await db
-      .collection('images')
-      .deleteOne({
-        _id: new ObjectId(imageId),
-        userId: session.user.id // Ensure user can only delete their own images
-      })
+    const result = await db.collection('images').deleteOne({
+      _id: new ObjectId(id)
+    });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { error: 'Image not found or unauthorized' },
-        { status: 404 }
-      )
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Image not found' 
+      }, { 
+        status: 404 
+      });
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true 
+    });
+    
   } catch (error) {
-    console.error('Gallery delete error:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete image' },
-      { status: 500 }
-    )
+    console.error('Delete error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to delete image' 
+    }, { 
+      status: 500 
+    });
   }
 } 
