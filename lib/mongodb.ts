@@ -10,22 +10,21 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Updated options with shorter timeouts for serverless environment
+// Updated options without directConnection for SRV URIs
 const options = {
-  maxPoolSize: 1, // Reduced for serverless
-  minPoolSize: 1, // Reduced for serverless
-  maxIdleTimeMS: 5000, // Reduced from 60000
-  connectTimeoutMS: 5000, // Reduced from 10000
-  socketTimeoutMS: 5000, // Reduced from 10000
-  serverSelectionTimeoutMS: 5000, // Reduced from 10000
-  waitQueueTimeoutMS: 5000, // Reduced from 10000
-  ssl: true,
-  tls: true,
+  maxPoolSize: 1,
+  minPoolSize: 1,
+  maxIdleTimeMS: 3000,
+  connectTimeoutMS: 3000,
+  socketTimeoutMS: 3000,
+  serverSelectionTimeoutMS: 3000,
+  waitQueueTimeoutMS: 3000,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
+  ssl: true,
+  tls: true,
   authSource: 'admin',
-  directConnection: false,
   replicaSet: 'atlas-6ae4rv-shard-0',
   authMechanism: 'SCRAM-SHA-1'
 } as const
@@ -35,7 +34,7 @@ let cachedClient: MongoClient | null = null;
 
 export default async function connectToDatabase(): Promise<MongoClient> {
   if (cachedClient) {
-    // Test cached connection before returning
+    // Quick ping to test connection
     try {
       await cachedClient.db().command({ ping: 1 });
       return cachedClient;
@@ -51,10 +50,7 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       uriPrefix: uri.substring(0, 20) + '...',
       environment: process.env.NODE_ENV,
       options: {
-        ssl: options.ssl,
-        tls: options.tls,
-        replicaSet: options.replicaSet,
-        authMechanism: options.authMechanism,
+        maxPoolSize: options.maxPoolSize,
         timeouts: {
           connect: options.connectTimeoutMS,
           socket: options.socketTimeoutMS,
@@ -66,16 +62,17 @@ export default async function connectToDatabase(): Promise<MongoClient> {
     // Create new client with connection timeout
     const client = new MongoClient(uri, options);
     
-    // Add connection timeout
-    const connectionPromise = client.connect();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS);
-    });
+    // Connect with timeout
+    const connectionWithTimeout = Promise.race([
+      client.connect(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
+      )
+    ]);
 
-    // Race between connection and timeout
-    cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
+    cachedClient = await connectionWithTimeout as MongoClient;
     
-    // Test the connection
+    // Quick test
     await cachedClient.db().command({ ping: 1 });
     console.log('Successfully connected to MongoDB');
     
