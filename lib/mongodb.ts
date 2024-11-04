@@ -28,37 +28,18 @@ const options = {
 
 // Create cached connection variable
 let cachedClient: MongoClient | null = null;
-let cachedPromise: Promise<MongoClient> | null = null;
 
-export default async function connectToDatabase() {
-  // If we have a cached connection, use it
+export default async function connectToDatabase(): Promise<MongoClient> {
   if (cachedClient) {
     return cachedClient;
   }
 
-  // If we have a cached promise, use it
-  if (!cachedPromise) {
-    const client = new MongoClient(uri, options);
-    cachedPromise = client.connect()
-      .then(client => {
-        cachedClient = client;
-        return client;
-      })
-      .catch(error => {
-        console.error('MongoDB connection error:', error);
-        cachedPromise = null;
-        throw error;
-      });
-  }
-
   try {
-    cachedClient = await cachedPromise;
+    const client = new MongoClient(uri, options);
+    cachedClient = await client.connect();
     return cachedClient;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    // Clear cache if connection fails
-    cachedClient = null;
-    cachedPromise = null;
+    console.error('MongoDB connection error:', error);
     throw error;
   }
 }
