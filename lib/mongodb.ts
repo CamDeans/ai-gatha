@@ -9,6 +9,8 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
+
+// Updated options to handle SSL/TLS issues
 const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
@@ -19,6 +21,7 @@ const options = {
   waitQueueTimeoutMS: 10000,
   ssl: true,
   tls: true,
+  tlsInsecure: false,
   tlsAllowInvalidCertificates: false,
   tlsAllowInvalidHostnames: false,
   retryWrites: true,
@@ -27,7 +30,9 @@ const options = {
   authSource: 'admin',
   directConnection: false,
   minVersion: 'TLS1_2',
-  maxVersion: 'TLS1_3'
+  maxVersion: 'TLS1_3',
+  replicaSet: 'atlas-6ae4rv-shard-0',
+  authMechanism: 'SCRAM-SHA-1'
 } as const
 
 // Create cached connection variable
@@ -42,7 +47,13 @@ export default async function connectToDatabase(): Promise<MongoClient> {
     console.log('Connecting to MongoDB...', { 
       hasUri: !!process.env.MONGODB_URI,
       uriPrefix: uri.substring(0, 20) + '...',
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
+      options: {
+        ssl: options.ssl,
+        tls: options.tls,
+        replicaSet: options.replicaSet,
+        authMechanism: options.authMechanism
+      }
     });
 
     const client = new MongoClient(uri, options);
