@@ -8,5 +8,4 @@ import { authConfig } from '@/auth.config';
 const handler = NextAuth(authConfig);
 
 // Export GET and POST directly
-export const GET = handler;
-export const POST = handler;
+export { handler as GET, handler as POST };

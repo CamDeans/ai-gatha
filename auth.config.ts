@@ -20,26 +20,24 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            return null;
+            throw new Error('Missing credentials');
           }
 
           const client = await connectToDatabase();
-          const db = client.db("deansight");
+          const users = client.db().collection("users");
           
-          const user = await db
-            .collection("users")
-            .findOne({ 
-              email: credentials.email.toLowerCase() 
-            });
+          const user = await users.findOne({ 
+            email: credentials.email.toLowerCase() 
+          });
 
           if (!user || !user.password) {
-            return null;
+            throw new Error('User not found');
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            return null;
+            throw new Error('Invalid password');
           }
 
           return {
@@ -80,5 +78,5 @@ export const authConfig: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false
+  debug: process.env.NODE_ENV === 'development'
 }
