@@ -33,21 +33,25 @@ export default function SignInForm() {
       }
 
       if (response.error) {
-        if (response.status === 504) {
-          setError('Connection timeout. Please try again.');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Connection timeout. Please try again."
-          });
-        } else {
-          setError('Invalid email or password');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Invalid email or password"
-          });
+        let errorMessage = 'Invalid email or password';
+        
+        try {
+          // Try to parse error message if it's JSON
+          const errorData = JSON.parse(response.error);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If error is not JSON, use it directly if it's a string
+          if (typeof response.error === 'string') {
+            errorMessage = response.error;
+          }
         }
+
+        setError(errorMessage);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage
+        });
         return;
       }
 
@@ -61,11 +65,12 @@ export default function SignInForm() {
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      setError('An error occurred. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again.';
+      setError(errorMessage);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An error occurred. Please try again."
+        description: errorMessage
       });
     } finally {
       setIsLoading(false);
