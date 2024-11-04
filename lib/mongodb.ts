@@ -13,9 +13,9 @@ const uri = process.env.MONGODB_URI;
 const options: MongoClientOptions = {
   maxPoolSize: 1,
   minPoolSize: 1,
-  connectTimeoutMS: 30000,
-  socketTimeoutMS: 30000,
-  serverSelectionTimeoutMS: 30000,
+  connectTimeoutMS: 60000,
+  socketTimeoutMS: 60000,
+  serverSelectionTimeoutMS: 60000,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
