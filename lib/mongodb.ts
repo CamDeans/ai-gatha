@@ -1,6 +1,5 @@
 /**
  * MongoDB client configuration and connection management
- * Handles different environments (development/production)
  */
 import { MongoClient } from 'mongodb'
 
@@ -10,31 +9,26 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Updated options without directConnection for SRV URIs
+// Simplified options for better reliability
 const options = {
   maxPoolSize: 1,
   minPoolSize: 1,
-  maxIdleTimeMS: 3000,
-  connectTimeoutMS: 3000,
-  socketTimeoutMS: 3000,
-  serverSelectionTimeoutMS: 3000,
-  waitQueueTimeoutMS: 3000,
+  connectTimeoutMS: 5000,
+  socketTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 5000,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
   ssl: true,
   tls: true,
   authSource: 'admin',
-  replicaSet: 'atlas-6ae4rv-shard-0',
   authMechanism: 'SCRAM-SHA-1'
 } as const
 
-// Create cached connection variable
 let cachedClient: MongoClient | null = null;
 
 export default async function connectToDatabase(): Promise<MongoClient> {
   if (cachedClient) {
-    // Quick ping to test connection
     try {
       await cachedClient.db().command({ ping: 1 });
       return cachedClient;
@@ -59,20 +53,17 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       }
     });
 
-    // Create new client with connection timeout
     const client = new MongoClient(uri, options);
     
     // Connect with timeout
-    const connectionWithTimeout = Promise.race([
-      client.connect(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
-      )
-    ]);
+    const connectionPromise = client.connect();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
+    );
 
-    cachedClient = await connectionWithTimeout as MongoClient;
+    cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
     
-    // Quick test
+    // Test connection
     await cachedClient.db().command({ ping: 1 });
     console.log('Successfully connected to MongoDB');
     

@@ -18,8 +18,15 @@ export const authConfig: AuthOptions = {
             return null;
           }
 
-          const client = await connectToDatabase();
-          const db = client.db('deansight'); // Specify database name
+          let client;
+          try {
+            client = await connectToDatabase();
+          } catch (error) {
+            console.error('MongoDB connection error:', error);
+            throw new Error('Database connection failed');
+          }
+
+          const db = client.db('deansight');
           const users = db.collection("users");
           
           const user = await users.findOne({ 
@@ -45,7 +52,7 @@ export const authConfig: AuthOptions = {
           };
         } catch (error) {
           console.error('Auth error:', error);
-          return null;
+          throw error; // Let NextAuth handle the error
         }
       }
     })
