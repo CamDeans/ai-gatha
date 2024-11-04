@@ -2,45 +2,38 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Loader } from 'lucide-react';
 
 export default function SignInForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    
     try {
+      const formData = new FormData(e.currentTarget);
       const response = await signIn('credentials', {
-        email: (formData.get('email') as string).toLowerCase(),
+        email: formData.get('email') as string,
         password: formData.get('password') as string,
         redirect: false,
       });
 
-      if (!response) {
-        throw new Error('Authentication failed');
-      }
-
-      if (response.error) {
+      if (response?.error) {
         setError('Invalid email or password');
         return;
       }
 
-      if (response.ok) {
+      if (response?.ok) {
         router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {
-      console.error('Sign in error:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -54,17 +47,13 @@ export default function SignInForm() {
           {error}
         </div>
       )}
-      {searchParams?.get('registered') && (
-        <div className="bg-green-50 text-green-500 p-3 rounded">
-          Account created successfully. Please sign in.
-        </div>
-      )}
       <div>
         <input
           type="email"
           name="email"
           placeholder="Email"
           required
+          autoComplete="email"
           className="w-full p-2 border rounded bg-background"
         />
       </div>
@@ -74,14 +63,14 @@ export default function SignInForm() {
           name="password"
           placeholder="Password"
           required
+          autoComplete="current-password"
           className="w-full p-2 border rounded bg-background"
         />
       </div>
       <Button
         type="submit"
+        className="w-full"
         disabled={isLoading}
-        variant="default"
-        className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white"
       >
         {isLoading ? (
           <>
