@@ -9,11 +9,11 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Optimized options for serverless
+// Simplified options for serverless environment
 const options = {
   maxPoolSize: 1,
   minPoolSize: 1,
-  connectTimeoutMS: 10000, // Increased timeout
+  connectTimeoutMS: 10000,
   socketTimeoutMS: 10000,
   serverSelectionTimeoutMS: 10000,
   retryWrites: true,
@@ -22,9 +22,7 @@ const options = {
   ssl: true,
   tls: true,
   authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1',
-  keepAlive: true, // Added keepAlive
-  keepAliveInitialDelay: 300000 // 5 minutes
+  authMechanism: 'SCRAM-SHA-1'
 } as const
 
 let cachedClient: MongoClient | null = null;
@@ -36,7 +34,7 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       return cachedClient;
     } catch (error) {
       console.log('Cached connection failed, creating new connection');
-      await cachedClient.close(); // Properly close failed connection
+      await cachedClient.close();
       cachedClient = null;
     }
   }
@@ -67,8 +65,8 @@ export default async function connectToDatabase(): Promise<MongoClient> {
         return cachedClient;
       } catch (error) {
         console.error(`Connection attempt ${i + 1} failed:`, error);
-        if (i === 2) throw error; // Throw on last attempt
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+        if (i === 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
