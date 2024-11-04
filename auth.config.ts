@@ -14,11 +14,13 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            throw new Error('Missing credentials');
+            console.log('Missing credentials');
+            return null;
           }
 
           const client = await connectToDatabase();
-          const users = client.db().collection("users");
+          const db = client.db('deansight'); // Specify database name
+          const users = db.collection("users");
           
           const user = await users.findOne({ 
             email: credentials.email.toLowerCase() 
@@ -53,5 +55,26 @@ export const authConfig: AuthOptions = {
     error: '/auth/error',
     signOut: '/auth/signin'
   },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+      }
+      return session;
+    }
+  },
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development'
 }
