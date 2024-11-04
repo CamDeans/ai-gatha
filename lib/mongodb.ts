@@ -8,11 +8,7 @@ if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
 }
 
-// Ensure URI starts with mongodb:// or mongodb+srv://
-const uri = process.env.MONGODB_URI.startsWith('mongodb://') || process.env.MONGODB_URI.startsWith('mongodb+srv://')
-  ? process.env.MONGODB_URI
-  : `mongodb+srv://${process.env.MONGODB_URI}`;
-
+const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
@@ -23,11 +19,15 @@ const options = {
   waitQueueTimeoutMS: 10000,
   ssl: true,
   tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
   authSource: 'admin',
-  directConnection: false
+  directConnection: false,
+  minVersion: 'TLS1_2',
+  maxVersion: 'TLS1_3'
 } as const
 
 // Create cached connection variable
@@ -41,14 +41,21 @@ export default async function connectToDatabase(): Promise<MongoClient> {
   try {
     console.log('Connecting to MongoDB...', { 
       hasUri: !!process.env.MONGODB_URI,
-      uriPrefix: uri.substring(0, 20) + '...' // Log prefix for debugging
+      uriPrefix: uri.substring(0, 20) + '...',
+      environment: process.env.NODE_ENV
     });
 
     const client = new MongoClient(uri, options);
     cachedClient = await client.connect();
+    
+    // Test the connection
+    await cachedClient.db().command({ ping: 1 });
+    console.log('Successfully connected to MongoDB');
+    
     return cachedClient;
   } catch (error) {
     console.error('MongoDB connection error:', error);
+    cachedClient = null; // Reset cached client on error
     throw error;
   }
 }
