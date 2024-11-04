@@ -8,11 +8,13 @@ interface ImageDocument extends WithId<Document> {
   createdAt: Date;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '12');
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '12');
     const skip = (page - 1) * limit;
 
     const client = await connectToDatabase();
@@ -52,8 +54,6 @@ export async function GET(request: Request) {
         }
       })
       .filter(Boolean);
-
-    console.log(`Processed ${processedImages.length} images successfully`);
 
     return NextResponse.json({ 
       success: true, 

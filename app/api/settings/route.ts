@@ -10,6 +10,8 @@ interface UserSettings {
   // Add other settings as needed
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getServerSession(authConfig);
