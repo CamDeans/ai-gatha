@@ -4,6 +4,10 @@
     "app/api/**/*": {
       "memory": 1024,
       "maxDuration": 30
+    },
+    "app/not-found.tsx": {
+      "memory": 1024,
+      "maxDuration": 10
     }
   },
   "headers": [
@@ -28,5 +32,12 @@
         }
       ]
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 } 
