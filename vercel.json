@@ -28,16 +28,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "MONGODB_URI": "@mongodb_uri",
-    "NEXTAUTH_URL": "https://${VERCEL_URL}",
-    "NEXTAUTH_SECRET": "@nextauth_secret"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  }
+  ]
 } 
