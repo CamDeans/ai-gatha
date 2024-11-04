@@ -18,6 +18,11 @@ export default withAuth(
     callbacks: {
       authorized: ({ token }) => !!token
     },
+    pages: {
+      signIn: '/auth/signin',
+      error: '/auth/error',
+      signOut: '/auth/signin',
+    }
   }
 );
 
@@ -29,7 +34,8 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/generate',
-    '/api/user/:path*'
+    '/api/user/:path*',
+    '/((?!auth|api|_next/static|_next/image|favicon.ico).*)',
   ]
 } 
 

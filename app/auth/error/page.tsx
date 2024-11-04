@@ -1,29 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
-export default function ErrorPage() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get('error');
-
-  useEffect(() => {
-    // Log the error for debugging in production
-    if (error) {
-      console.error('Auth error:', error);
-    }
-  }, [error]);
+export default function AuthError({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
+  const error = searchParams?.error || 'An error occurred';
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
-        <p className="text-gray-600">
-          {error === 'CredentialsSignin' 
-            ? 'Invalid email or password'
-            : 'An error occurred during authentication'}
-        </p>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Authentication Error</h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            {error}
+          </p>
+          <Button asChild>
+            <Link href="/auth/signin">
+              Try Again
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
-} 
+}
+
+// Add static rendering configuration
+export const dynamic = 'force-static'; 
