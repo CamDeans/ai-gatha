@@ -8,7 +8,11 @@ if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
 }
 
-const uri = process.env.MONGODB_URI
+// Ensure URI starts with mongodb:// or mongodb+srv://
+const uri = process.env.MONGODB_URI.startsWith('mongodb://') || process.env.MONGODB_URI.startsWith('mongodb+srv://')
+  ? process.env.MONGODB_URI
+  : `mongodb+srv://${process.env.MONGODB_URI}`;
+
 const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
@@ -35,6 +39,11 @@ export default async function connectToDatabase(): Promise<MongoClient> {
   }
 
   try {
+    console.log('Connecting to MongoDB...', { 
+      hasUri: !!process.env.MONGODB_URI,
+      uriPrefix: uri.substring(0, 20) + '...' // Log prefix for debugging
+    });
+
     const client = new MongoClient(uri, options);
     cachedClient = await client.connect();
     return cachedClient;
