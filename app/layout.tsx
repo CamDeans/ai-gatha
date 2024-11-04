@@ -16,9 +16,11 @@ export const metadata: Metadata = {
   title: 'AI Gatha',
   description: 'AI Image Generation Platform',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' }
+    ],
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180' }
   },
 }
 

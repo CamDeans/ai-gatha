@@ -23,7 +23,7 @@ export const authConfig: AuthOptions = {
             client = await connectToDatabase();
           } catch (error) {
             console.error('MongoDB connection error:', error);
-            throw new Error('Database connection failed');
+            throw new Error('Database connection failed. Please try again.');
           }
 
           const db = client.db('deansight');
@@ -52,7 +52,7 @@ export const authConfig: AuthOptions = {
           };
         } catch (error) {
           console.error('Auth error:', error);
-          throw error; // Let NextAuth handle the error
+          throw error;
         }
       }
     })

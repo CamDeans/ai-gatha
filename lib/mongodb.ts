@@ -9,20 +9,22 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Simplified options for better reliability
+// Optimized options for serverless
 const options = {
   maxPoolSize: 1,
   minPoolSize: 1,
-  connectTimeoutMS: 5000,
-  socketTimeoutMS: 5000,
-  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000, // Increased timeout
+  socketTimeoutMS: 10000,
+  serverSelectionTimeoutMS: 10000,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
   ssl: true,
   tls: true,
   authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1'
+  authMechanism: 'SCRAM-SHA-1',
+  keepAlive: true, // Added keepAlive
+  keepAliveInitialDelay: 300000 // 5 minutes
 } as const
 
 let cachedClient: MongoClient | null = null;
@@ -34,6 +36,7 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       return cachedClient;
     } catch (error) {
       console.log('Cached connection failed, creating new connection');
+      await cachedClient.close(); // Properly close failed connection
       cachedClient = null;
     }
   }
@@ -55,19 +58,21 @@ export default async function connectToDatabase(): Promise<MongoClient> {
 
     const client = new MongoClient(uri, options);
     
-    // Connect with timeout
-    const connectionPromise = client.connect();
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
-    );
+    // Connect with retries
+    for (let i = 0; i < 3; i++) {
+      try {
+        cachedClient = await client.connect();
+        await cachedClient.db().command({ ping: 1 });
+        console.log('Successfully connected to MongoDB');
+        return cachedClient;
+      } catch (error) {
+        console.error(`Connection attempt ${i + 1} failed:`, error);
+        if (i === 2) throw error; // Throw on last attempt
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+      }
+    }
 
-    cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
-    
-    // Test connection
-    await cachedClient.db().command({ ping: 1 });
-    console.log('Successfully connected to MongoDB');
-    
-    return cachedClient;
+    throw new Error('Failed to connect after retries');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     cachedClient = null;
