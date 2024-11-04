@@ -28,17 +28,30 @@ export default function SignInForm() {
         callbackUrl: '/dashboard'
       });
 
-      if (response?.error) {
-        setError('Invalid email or password');
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Invalid email or password"
-        });
+      if (!response) {
+        throw new Error('Network error');
+      }
+
+      if (response.error) {
+        if (response.status === 504) {
+          setError('Connection timeout. Please try again.');
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Connection timeout. Please try again."
+          });
+        } else {
+          setError('Invalid email or password');
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Invalid email or password"
+          });
+        }
         return;
       }
 
-      if (response?.ok) {
+      if (response.ok) {
         toast({
           title: "Success",
           description: "Signed in successfully"
@@ -93,7 +106,7 @@ export default function SignInForm() {
       </div>
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white"
         disabled={isLoading}
       >
         {isLoading ? (
