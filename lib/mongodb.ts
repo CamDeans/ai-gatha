@@ -1,7 +1,7 @@
 /**
  * MongoDB client configuration and connection management
  */
-import { MongoClient } from 'mongodb'
+import { MongoClient, MongoClientOptions } from 'mongodb'
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
@@ -9,21 +9,24 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Simplified options for serverless environment
-const options = {
+// Optimized options for serverless with TLS 1.2
+const options: MongoClientOptions = {
   maxPoolSize: 1,
   minPoolSize: 1,
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 10000,
-  serverSelectionTimeoutMS: 10000,
+  connectTimeoutMS: 5000,
+  socketTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 5000,
   retryWrites: true,
   retryReads: true,
   w: 'majority',
-  ssl: true,
   tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
+  tlsCAFile: undefined, // Let MongoDB driver handle CA
   authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1'
-} as const
+  authMechanism: 'SCRAM-SHA-1',
+  compressors: ['none'] as ("none" | "snappy" | "zlib" | "zstd")[] // Properly typed array
+};
 
 let cachedClient: MongoClient | null = null;
 
@@ -56,21 +59,22 @@ export default async function connectToDatabase(): Promise<MongoClient> {
 
     const client = new MongoClient(uri, options);
     
-    // Connect with retries
-    for (let i = 0; i < 3; i++) {
-      try {
-        cachedClient = await client.connect();
-        await cachedClient.db().command({ ping: 1 });
-        console.log('Successfully connected to MongoDB');
-        return cachedClient;
-      } catch (error) {
-        console.error(`Connection attempt ${i + 1} failed:`, error);
-        if (i === 2) throw error;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+    // Single connection attempt with timeout
+    try {
+      const connectionPromise = client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
+      );
+
+      cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
+      await cachedClient.db().command({ ping: 1 });
+      console.log('Successfully connected to MongoDB');
+      return cachedClient;
+    } catch (error) {
+      await client.close();
+      throw error;
     }
 
-    throw new Error('Failed to connect after retries');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     cachedClient = null;
@@ -81,6 +85,9 @@ export default async function connectToDatabase(): Promise<MongoClient> {
       }
       if (error.message.includes('authentication failed')) {
         throw new Error('MongoDB authentication failed. Check credentials.');
+      }
+      if (error.message.includes('SSL routines')) {
+        throw new Error('SSL connection failed. Please check your connection settings.');
       }
     }
     throw error;
