@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 
 export default function SignIn() {
   const router = useRouter()
@@ -72,13 +73,13 @@ export default function SignIn() {
           className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
         />
       </div>
-      <button
+      <Button
         type="submit"
         disabled={loading}
-        className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+        className="w-full"
       >
         {loading ? 'Signing in...' : 'Sign In'}
-      </button>
+      </Button>
     </form>
   )
 } 

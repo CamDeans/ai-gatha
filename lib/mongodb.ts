@@ -19,34 +19,46 @@ const options = {
   waitQueueTimeoutMS: 10000,
   ssl: true,
   tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
   retryWrites: true,
   retryReads: true,
-  w: 1
+  w: 'majority',
+  authSource: 'admin',
+  directConnection: false
 } as const
 
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
+// Create cached connection variable
+let cachedClient: MongoClient | null = null;
+let cachedPromise: Promise<MongoClient> | null = null;
 
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
+export default async function connectToDatabase() {
+  // If we have a cached connection, use it
+  if (cachedClient) {
+    return cachedClient;
   }
 
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = client.connect()
+  // If we have a cached promise, use it
+  if (!cachedPromise) {
+    const client = new MongoClient(uri, options);
+    cachedPromise = client.connect()
+      .then(client => {
+        cachedClient = client;
+        return client;
+      })
+      .catch(error => {
+        console.error('MongoDB connection error:', error);
+        cachedPromise = null;
+        throw error;
+      });
   }
-  clientPromise = globalWithMongo._mongoClientPromise
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+
+  try {
+    cachedClient = await cachedPromise;
+    return cachedClient;
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    // Clear cache if connection fails
+    cachedClient = null;
+    cachedPromise = null;
+    throw error;
+  }
 }
-
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise

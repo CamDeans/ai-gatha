@@ -1,55 +1,76 @@
-'use client'
+'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AISparkleIcon } from '../icons/AISparkleIcon';
 import { Button } from '../ui/button';
+import { PromptEngineer } from '@/lib/prompts/engineer';
+import PromptModal from '../prompts/PromptModal';
+import AdvancedPromptControls from '../prompts/AdvancedPromptControls';
+import { Loader } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { PromptTemplate } from "@/lib/prompts/database";
 
 interface PromptInputProps {
   onImageGenerated: (imageUrl: string | null) => void;
   onPromptChange: (prompt: string) => void;
   onRefinementClick: () => void;
-  onSuggestionsClick: () => void;
-  onAdvancedClick: () => void;
-  showAdvanced: boolean;
 }
 
-const PromptInput: React.FC<PromptInputProps> = ({ 
+interface GenerateResponse {
+  success: boolean;
+  image?: string;
+  error?: string;
+}
+
+export default function PromptInput({ 
   onImageGenerated, 
-  onPromptChange,
-  onRefinementClick,
-  onSuggestionsClick,
-  onAdvancedClick,
-  showAdvanced
-}) => {
+  onPromptChange, 
+  onRefinementClick 
+}: PromptInputProps) {
+  const [prompt, setPrompt] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showIdeasModal, setShowIdeasModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{
+    prompt: string;
+    confidence: number;
+    template: PromptTemplate;
+  }>>([]);
+
   const { data: session } = useSession();
   const router = useRouter();
-  const [prompt, setPrompt] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newPrompt = e.target.value;
-    setPrompt(newPrompt);
-    onPromptChange(newPrompt); // Call the onPromptChange callback
+  const handlePromptChange = (value: string) => {
+    setPrompt(value);
+    onPromptChange(value);
+    if (value.length > 3) {
+      const newSuggestions = PromptEngineer.generatePromptSuggestions(value);
+      setSuggestions(newSuggestions);
+    } else {
+      setSuggestions([]);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
-      setError('Please enter a prompt');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a prompt first",
+      });
       return;
     }
-
-    setIsLoading(true);
-
+    
+    setIsGenerating(true);
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
@@ -57,80 +78,152 @@ const PromptInput: React.FC<PromptInputProps> = ({
         throw new Error('Failed to generate image');
       }
 
-      const data = await response.json();
-      onImageGenerated(data.imageUrl);
+      const data: GenerateResponse = await response.json();
+      console.log('Generation response:', data); // Debug log
+
+      if (data.success && data.image) {
+        // Add base64 prefix if not present
+        const imageUrl = data.image.startsWith('data:image') 
+          ? data.image 
+          : `data:image/png;base64,${data.image}`;
+        
+        onImageGenerated(imageUrl);
+        toast({
+          title: "Success",
+          description: "Image generated successfully",
+        });
+      } else {
+        throw new Error(data.error || 'No image generated');
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to generate image');
+      console.error('Generation error:', error);
       onImageGenerated(null);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to generate image',
+      });
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
     }
+  };
+
+  const handleGetIdeas = useCallback(() => {
+    if (!prompt.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a prompt first",
+      });
+      return;
+    }
+
+    try {
+      // Generate suggestions using the current prompt
+      const ideas = PromptEngineer.generatePromptSuggestions(prompt);
+      
+      if (ideas.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No suggestions",
+          description: "No suggestions available for this prompt. Try being more specific.",
+        });
+        return;
+      }
+
+      setSuggestions(ideas);
+      setShowIdeasModal(true);
+      
+    } catch (error) {
+      console.error('Error generating ideas:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate ideas. Please try again.",
+      });
+    }
+  }, [prompt, toast]);
+
+  const handleSelectIdea = (selectedPrompt: string) => {
+    setPrompt(selectedPrompt);
+    onPromptChange(selectedPrompt);
+    setShowIdeasModal(false);
+    toast({
+      title: "Prompt selected",
+      description: "The prompt has been updated with your selection.",
+    });
   };
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <textarea
-          value={prompt}
-          onChange={handlePromptChange}
-          placeholder="Describe the image you want to generate..."
-          className="w-full min-h-[100px] p-4 rounded-lg border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-          disabled={isLoading}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <textarea
+            value={prompt}
+            onChange={(e) => handlePromptChange(e.target.value)}
+            placeholder="Describe the image you want to generate..."
+            className="flex-1 min-h-[100px] p-3 rounded-lg border bg-background resize-none"
+          />
+        </div>
+
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGetIdeas}
+              variant="outline"
+              disabled={prompt.length === 0 || isGenerating}
+            >
+              Get Ideas
+            </Button>
+            <Button
+              onClick={onRefinementClick}
+              variant="outline"
+              disabled={prompt.length === 0 || isGenerating}
+            >
+              Refine Prompt
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={prompt.length === 0 || isGenerating}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                'Generate Image'
+              )}
+            </Button>
+          </div>
+
+          <Button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            variant="ghost"
+            className="group"
+          >
+            <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+            {showAdvanced ? 'Hide' : 'Show'} Advanced
+          </Button>
+        </div>
+      </div>
+
+      {showAdvanced && (
+        <AdvancedPromptControls
+          basePrompt={prompt}
+          onPromptUpdate={onPromptChange}
         />
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-      </div>
+      )}
 
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading || !prompt.trim()}
-          className="flex-1"
-        >
-          {isLoading ? (
-            <>
-              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <AISparkleIcon className="h-4 w-4 mr-2" />
-              Generate Image
-            </>
-          )}
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onSuggestionsClick}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          Get Ideas
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onRefinementClick}
-          disabled={!prompt.trim()}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          Refine
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onAdvancedClick}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          {showAdvanced ? 'Hide' : 'Show'} Advanced
-        </Button>
-      </div>
+      {showIdeasModal && (
+        <PromptModal
+          isOpen={showIdeasModal}
+          onClose={() => setShowIdeasModal(false)}
+          suggestions={suggestions}
+          onSelect={handleSelectIdea}
+        />
+      )}
     </div>
   );
-};
-
-export default PromptInput;
+}

@@ -1,132 +1,145 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
-import ImageDisplay from '@/components/dashboard/ImageDisplay'
-import { toast } from 'sonner'
-import { TrashIcon } from '@heroicons/react/24/outline'
+import { useEffect, useState } from 'react';
+import { useInView } from 'react-intersection-observer';
+import ImageDisplay from '@/components/ImageDisplay';
+import { LoadingSpinner } from '@/components/ui/loading';
+import { ErrorMessage } from '@/components/ui/error';
 
-interface GalleryImage {
-  id: string
-  imageUrl: string
-  prompt: string
-  createdAt: string
+interface Image {
+  id: string;
+  prompt: string;
+  imageUrl: string | string[];
+  createdAt: string;
 }
 
-export default function GalleryPage() {
-  const { data: session } = useSession()
-  const [images, setImages] = useState<GalleryImage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
+interface ApiResponse {
+  success: boolean;
+  images: Image[];
+  error?: string;
+}
+
+const ITEMS_PER_PAGE = 12;
+
+export default function Gallery() {
+  const [images, setImages] = useState<Image[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [initialLoad, setInitialLoad] = useState(true);
+  
+  const { ref, inView } = useInView();
 
   useEffect(() => {
-    fetchImages()
-  }, [session])
+    fetchImages(true);
+  }, []);
 
-  async function fetchImages() {
+  useEffect(() => {
+    if (inView && hasMore && !loading && !initialLoad) {
+      fetchImages(false);
+    }
+  }, [inView, hasMore, loading, initialLoad]);
+
+  async function fetchImages(isInitialFetch: boolean) {
     try {
-      const response = await fetch('/api/gallery')
-      if (!response.ok) {
-        throw new Error('Failed to fetch images')
+      setLoading(true);
+      const currentPage = isInitialFetch ? 1 : page;
+      const response = await fetch(`/api/gallery?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      const data = await response.json() as ApiResponse;
+      
+      if (data.success) {
+        setImages(prev => {
+          const newImages = isInitialFetch ? data.images : [...prev, ...data.images];
+          // Remove duplicates based on id while maintaining type safety
+          const uniqueImages = Array.from(
+            new Map(
+              newImages.map((img: Image) => [img.id, img])
+            ).values()
+          ) as Image[];
+          return uniqueImages;
+        });
+        setHasMore(data.images.length === ITEMS_PER_PAGE);
+        setPage(prev => isInitialFetch ? 2 : prev + 1);
+      } else {
+        console.error('Failed to fetch images:', data.error);
+        setError(data.error || 'Failed to fetch images');
       }
-      const data = await response.json()
-      setImages(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load gallery')
+      console.error('Gallery error:', err);
+      setError('Failed to load gallery');
     } finally {
-      setLoading(false)
+      setLoading(false);
+      setInitialLoad(false);
     }
   }
 
-  async function handleDelete(imageId: string) {
-    try {
-      setDeleting(imageId)
-      const response = await fetch('/api/gallery/delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageId }),
-      })
+  const handleDelete = (id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id));
+  };
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to delete image')
-      }
+  const handleRetry = () => {
+    setError(null);
+    setInitialLoad(true);
+    setPage(1);
+    fetchImages(true);
+  };
 
-      // Remove the image from the local state
-      setImages(images.filter(img => img.id !== imageId))
-      toast.success('Image deleted successfully')
-    } catch (error) {
-      console.error('Error deleting image:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to delete image')
-    } finally {
-      setDeleting(null)
-    }
+  // Show loading spinner on initial load
+  if (initialLoad && loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
-  if (loading) {
+  // Show error message if there's an error and no images
+  if (error && images.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
-        <div className="loading-spinner" />
+      <div className="p-4">
+        <ErrorMessage 
+          message={error} 
+          retry={handleRetry}
+        />
       </div>
-    )
+    );
   }
 
-  if (error) {
+  // Show "No images" message if there are no images and no error
+  if (!loading && images.length === 0) {
     return (
-      <div className="text-center text-red-500 p-4">
-        {error}
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-4">
+        <p className="text-lg text-muted-foreground">No images found</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Generate some images to see them here
+        </p>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Your Gallery</h1>
+    <div className="space-y-8 p-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {images.map((image) => (
+          <ImageDisplay
+            key={image.id}
+            id={image.id}
+            imageUrl={image.imageUrl}
+            prompt={image.prompt}
+            createdAt={image.createdAt}
+            onDelete={handleDelete}
+          />
+        ))}
       </div>
-
-      {images.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            No images yet. Generate some images to see them here!
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {images.map((image) => (
-            <div key={image.id} className="group bg-card rounded-lg border shadow-sm overflow-hidden">
-              <div className="aspect-square relative">
-                <ImageDisplay imageUrl={image.imageUrl} />
-                <button
-                  onClick={() => handleDelete(image.id)}
-                  disabled={deleting === image.id}
-                  className={`absolute top-2 right-2 p-2 rounded-full bg-background/80 hover:bg-background border border-border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${
-                    deleting === image.id ? 'cursor-not-allowed opacity-50' : ''
-                  }`}
-                  title="Delete image"
-                >
-                  {deleting === image.id ? (
-                    <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <TrashIcon className="h-5 w-5 text-destructive" />
-                  )}
-                </button>
-              </div>
-              <div className="p-4 space-y-2">
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {image.prompt}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(image.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      
+      {/* Loading/Intersection Observer trigger */}
+      <div ref={ref} className="h-10 flex items-center justify-center">
+        {loading && !initialLoad && <LoadingSpinner />}
+        {!hasMore && images.length > 0 && (
+          <p className="text-sm text-muted-foreground">No more images to load</p>
+        )}
+      </div>
     </div>
-  )
+  );
 } 

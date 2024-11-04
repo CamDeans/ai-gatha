@@ -3,6 +3,8 @@
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function SignInForm() {
   const router = useRouter();
@@ -48,7 +50,7 @@ export default function SignInForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 text-red-500 p-3 rounded">
+        <div className="bg-destructive/10 text-destructive p-3 rounded">
           {error}
         </div>
       )}
@@ -63,7 +65,7 @@ export default function SignInForm() {
           name="email"
           placeholder="Email"
           required
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded bg-background"
         />
       </div>
       <div>
@@ -72,16 +74,24 @@ export default function SignInForm() {
           name="password"
           placeholder="Password"
           required
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded bg-background"
         />
       </div>
-      <button
+      <Button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-blue-500 text-white p-2 rounded disabled:opacity-50"
+        variant="default"
+        className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white"
       >
-        {isLoading ? 'Signing in...' : 'Sign In'}
-      </button>
+        {isLoading ? (
+          <>
+            <Loader className="mr-2 h-4 w-4 animate-spin" />
+            Signing In...
+          </>
+        ) : (
+          'Sign In'
+        )}
+      </Button>
     </form>
   );
 } 

@@ -4,80 +4,133 @@ interface RefinementSuggestion {
   example: string;
 }
 
+interface RefinementOption {
+  type: 'style' | 'detail' | 'composition' | 'lighting' | 'mood';
+  style?: string;
+  lighting?: string;
+  detail?: string;
+  composition?: string;
+  mood?: string;
+  suggestion: string;
+}
+
 export class PromptRefiner {
+  // Base quality modifiers that will be added to every prompt
+  private static baseQualityModifiers = [
+    //'ultra realistic',
+    //'professional photography',
+    //'sharp focus',
+    '8k uhd',
+    'perfect anatomy',
+    //'hyperrealistic details'
+  ];
+
+  // Each style has a completely different approach
   private static styleModifiers = [
-    'photorealistic', 'cinematic', 'artistic', 'minimalist', 
-    'surreal', 'abstract', 'vintage', 'futuristic'
+    'cinematic film still, anamorphic lens, movie scene quality, dramatic composition',
+    'high fashion editorial, vogue magazine quality, professional model pose',
+    'professional portrait photography, studio lighting setup, commercial grade',
+    'artistic photography, creative composition, unique perspective'
   ];
 
+  // Each detail variation focuses on different aspects
   private static detailModifiers = [
-    'highly detailed', 'intricate', '8k resolution', 'sharp focus',
-    'ultra HD', 'masterpiece', 'professional', 'award-winning'
+    'intricate fine details, ultra sharp focus, crystal clear resolution',
+    'photorealistic skin textures, natural materials, lifelike details',
+    'high-end production value, premium quality finish, flawless execution',
+    'masterpiece quality, award-winning photography, perfect clarity'
   ];
 
+  // Each composition offers a distinct view
   private static compositionModifiers = [
-    'wide angle', 'close-up', 'panoramic', 'aerial view',
-    'symmetrical', 'rule of thirds', 'dynamic composition'
+    'dynamic angle, dramatic perspective, cinematic framing',
+    'symmetrical composition, perfect balance, harmonious layout',
+    'close-up detail shot, macro photography, intimate perspective',
+    'wide establishing shot, environmental context, grand scale'
   ];
 
+  // Each lighting setup creates a unique mood
   private static lightingModifiers = [
-    'soft lighting', 'dramatic lighting', 'natural light', 'golden hour',
-    'backlit', 'studio lighting', 'volumetric lighting'
+    'dramatic rim lighting, high contrast shadows, moody atmosphere',
+    'soft natural sunlight, golden hour glow, warm tones',
+    'professional studio lighting, perfect highlights, clean shadows',
+    'atmospheric volumetric lighting, cinematic rays, depth lighting'
   ];
 
+  // Each mood creates a distinct emotional response
   private static moodModifiers = [
-    'peaceful', 'dramatic', 'mysterious', 'energetic',
-    'serene', 'dark', 'vibrant', 'melancholic'
+    'dramatic and intense, powerful emotional impact, striking presence',
+    'elegant and sophisticated, refined luxury, timeless beauty',
+    'bright and energetic, vibrant atmosphere, dynamic feeling',
+    'calm and serene, peaceful ambiance, tranquil mood'
   ];
 
   static refinePrompt(prompt: string): RefinementSuggestion[] {
     const suggestions: RefinementSuggestion[] = [];
-    const lowerPrompt = prompt.toLowerCase();
+    
+    // Add base quality to the prompt
+    const basePrompt = `${prompt}, ${this.baseQualityModifiers.join(', ')}`;
 
-    // Check if prompt lacks style specification
-    if (!this.styleModifiers.some(style => lowerPrompt.includes(style.toLowerCase()))) {
-      suggestions.push({
+    // Create five distinct refinements, each with a unique combination
+    const refinements: RefinementOption[] = [
+      {
         type: 'style',
-        suggestion: 'Add a specific style',
-        example: `${prompt}, ${this.styleModifiers[Math.floor(Math.random() * this.styleModifiers.length)]} style`
-      });
-    }
-
-    // Check if prompt lacks detail specification
-    if (!this.detailModifiers.some(detail => lowerPrompt.includes(detail.toLowerCase()))) {
-      suggestions.push({
-        type: 'detail',
-        suggestion: 'Add detail level',
-        example: `${this.detailModifiers[Math.floor(Math.random() * this.detailModifiers.length)]}, ${prompt}`
-      });
-    }
-
-    // Check if prompt lacks composition guidance
-    if (!this.compositionModifiers.some(comp => lowerPrompt.includes(comp.toLowerCase()))) {
-      suggestions.push({
+        style: this.styleModifiers[0],
+        lighting: this.lightingModifiers[0],
+        suggestion: 'Cinematic and dramatic version',
+      },
+      {
+        type: 'style',
+        style: this.styleModifiers[1],
+        detail: this.detailModifiers[1],
+        suggestion: 'High fashion editorial version',
+      },
+      {
         type: 'composition',
-        suggestion: 'Specify composition',
-        example: `${prompt}, ${this.compositionModifiers[Math.floor(Math.random() * this.compositionModifiers.length)]}`
-      });
-    }
-
-    // Check if prompt lacks lighting specification
-    if (!this.lightingModifiers.some(light => lowerPrompt.includes(light.toLowerCase()))) {
-      suggestions.push({
-        type: 'lighting',
-        suggestion: 'Add lighting details',
-        example: `${prompt}, ${this.lightingModifiers[Math.floor(Math.random() * this.lightingModifiers.length)]}`
-      });
-    }
-
-    // Check if prompt lacks mood specification
-    if (!this.moodModifiers.some(mood => lowerPrompt.includes(mood.toLowerCase()))) {
-      suggestions.push({
+        composition: this.compositionModifiers[2],
+        lighting: this.lightingModifiers[2],
+        suggestion: 'Detailed close-up version',
+      },
+      {
         type: 'mood',
-        suggestion: 'Add mood',
-        example: `${prompt}, ${this.moodModifiers[Math.floor(Math.random() * this.moodModifiers.length)]} atmosphere`
+        mood: this.moodModifiers[3],
+        composition: this.compositionModifiers[3],
+        suggestion: 'Serene wide-angle version',
+      },
+      {
+        type: 'lighting',
+        lighting: this.lightingModifiers[1],
+        detail: this.detailModifiers[0],
+        suggestion: 'Natural light detailed version',
+      }
+    ];
+
+    // Create unique combinations for each refinement
+    refinements.forEach(refinement => {
+      let enhancedPrompt = basePrompt;
+      
+      if (refinement.style) {
+        enhancedPrompt += `, ${refinement.style}`;
+      }
+      if (refinement.lighting) {
+        enhancedPrompt += `, ${refinement.lighting}`;
+      }
+      if (refinement.detail) {
+        enhancedPrompt += `, ${refinement.detail}`;
+      }
+      if (refinement.composition) {
+        enhancedPrompt += `, ${refinement.composition}`;
+      }
+      if (refinement.mood) {
+        enhancedPrompt += `, ${refinement.mood}`;
+      }
+
+      suggestions.push({
+        type: refinement.type,
+        suggestion: refinement.suggestion,
+        example: enhancedPrompt
       });
-    }
+    });
 
     return suggestions;
   }

@@ -44,16 +44,16 @@ export class PromptEnhancer {
   };
 
   static detailEnhancements = [
-    'ultra detailed skin texture',
-    'photorealistic details',
-    'professional retouching',
-    'perfect lighting',
-    'sharp focus',
-    'high detail',
-    '8k uhd',
-    'raw photo',
-    'high end production',
-    'award winning quality'
+    'High Detail',
+    'Ultra HD',
+    'Raw Photo',
+    'High End Production',
+    'Award Winning Quality',
+    'Professional Grade',
+    'Studio Quality',
+    'Perfect Composition',
+    'Sharp Focus',
+    'Masterpiece Quality'
   ];
 
   static enhancePrompt(prompt: string, options: EnhancementOptions = {}): string {

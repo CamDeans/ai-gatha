@@ -2,14 +2,20 @@
  * Root layout component for the Deansight AI application
  * Handles global providers, authentication, and theme management
  */
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme/ThemeProvider'
-import { Toaster } from 'sonner'
-import AuthProvider from '@/components/auth/AuthProvider'
-import '@/styles/globals.css'
+import { Providers } from '@/components/providers'
+import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/toaster'
+import './globals.css'
 
 // Initialize Inter font with Latin subset
 const inter = Inter({ subsets: ["latin"] })
+
+export const metadata: Metadata = {
+  title: 'AI Gatha',
+  description: 'AI Image Generation Platform',
+}
 
 export default function RootLayout({
   children,
@@ -19,16 +25,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-        >
-          <AuthProvider session={null}>
+        <Providers>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
             {children}
             <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )

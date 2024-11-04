@@ -8,136 +8,136 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Loader } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
-export default function SignUp() {
+export default function SignUpPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
     setError(null)
+    setIsLoading(true)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => {
-      try {
-        controller.abort('Request timeout')
-      } catch (e) {
-        console.error('Abort error:', e)
-      }
-    }, 15000)
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      const res = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email: email.toLowerCase(),
-          password 
+          password,
         }),
-        signal: controller.signal
       })
 
-      if (controller.signal.aborted) {
-        throw new Error('Request timed out')
-      }
+      const data = await response.json()
 
-      const contentType = res.headers.get('content-type')
-      if (!contentType?.includes('application/json')) {
-        const text = await res.text()
-        console.error('Non-JSON response:', text)
-        throw new Error('Invalid server response')
-      }
-
-      const data = await res.json()
-
-      if (!res.ok) {
+      if (!response.ok) {
         throw new Error(data.error || 'Failed to create account')
       }
 
-      if (data.success) {
-        router.push('/auth/signin?registered=true')
-        router.refresh()
-      } else {
-        throw new Error(data.error || 'Failed to create account')
-      }
-    } catch (error: unknown) {
-      console.error('Signup error:', error)
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError' || error.message === 'Request timed out') {
-          setError('Request timed out. Please try again later.')
-        } else if (error.message.includes('fetch failed')) {
-          setError('Network error. Please check your connection.')
-        } else {
-          setError(error.message)
-        }
-      } else {
-        setError('An unexpected error occurred')
-      }
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully.",
+      })
+
+      router.push('/auth/signin?registered=true')
+    } catch (error) {
+      console.error('Sign up error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to create account')
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to create account',
+      })
     } finally {
-      clearTimeout(timeoutId)
       setIsLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-      {error && (
-        <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
-          {error}
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Create an Account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/auth/signin" className="text-primary hover:text-primary/90">
+              Sign in
+            </Link>
+          </p>
         </div>
-      )}
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-            minLength={6}
-          />
-        </div>
-      </div>
 
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full"
-      >
-        {isLoading ? 'Creating account...' : 'Sign Up'}
-      </Button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-destructive/10 text-destructive p-3 rounded">
+              {error}
+            </div>
+          )}
 
-      <div className="text-center text-sm">
-        <span className="text-muted-foreground">Already have an account? </span>
-        <Link href="/auth/signin" className="text-primary hover:underline">
-          Sign In
-        </Link>
+          <div>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              required
+              className="w-full p-2 border rounded bg-background"
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              required
+              minLength={6}
+              className="w-full p-2 border rounded bg-background"
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              required
+              minLength={6}
+              className="w-full p-2 border rounded bg-background"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Creating Account...
+              </>
+            ) : (
+              'Create Account'
+            )}
+          </Button>
+        </form>
       </div>
-    </form>
+    </div>
   )
 } 

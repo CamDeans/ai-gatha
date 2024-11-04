@@ -1,8 +1,7 @@
 import type { AuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
-import clientPromise from "@/lib/mongodb"
-import { MongoClient } from "mongodb"
+import connectToDatabase from "@/lib/mongodb"
 
 export const authConfig: AuthOptions = {
   providers: [
@@ -19,12 +18,12 @@ export const authConfig: AuthOptions = {
         }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
         try {
-          const client = await clientPromise;
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
+
+          const client = await connectToDatabase();
           const db = client.db("deansight");
           
           const user = await db
@@ -37,9 +36,9 @@ export const authConfig: AuthOptions = {
             return null;
           }
 
-          const isPasswordValid = await compare(credentials.password, user.password);
+          const isValid = await compare(credentials.password, user.password);
           
-          if (!isPasswordValid) {
+          if (!isValid) {
             return null;
           }
 
@@ -81,5 +80,5 @@ export const authConfig: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development'
+  debug: false
 }
