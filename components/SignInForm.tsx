@@ -2,21 +2,18 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function SignInForm() {
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
 
     try {
@@ -33,44 +30,24 @@ export default function SignInForm() {
       }
 
       if (response.error) {
-        let errorMessage = 'Invalid email or password';
-        
-        try {
-          // Try to parse error message if it's JSON
-          const errorData = JSON.parse(response.error);
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          // If error is not JSON, use it directly if it's a string
-          if (typeof response.error === 'string') {
-            errorMessage = response.error;
-          }
-        }
-
-        setError(errorMessage);
         toast({
           variant: "destructive",
           title: "Error",
-          description: errorMessage
+          description: response.error
         });
         return;
       }
 
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Signed in successfully"
-        });
         router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again.';
-      setError(errorMessage);
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage
+        description: "An error occurred. Please try again."
       });
     } finally {
       setIsLoading(false);
@@ -79,16 +56,6 @@ export default function SignInForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded">
-          {error}
-        </div>
-      )}
-      {searchParams?.get('error') && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded">
-          {searchParams.get('error')}
-        </div>
-      )}
       <div>
         <input
           type="email"

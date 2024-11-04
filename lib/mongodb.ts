@@ -9,7 +9,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Optimized options for serverless with TLS 1.2
+// Production-ready MongoDB options
 const options: MongoClientOptions = {
   maxPoolSize: 1,
   minPoolSize: 1,
@@ -20,12 +20,8 @@ const options: MongoClientOptions = {
   retryReads: true,
   w: 'majority',
   tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
-  tlsCAFile: undefined, // Let MongoDB driver handle CA
   authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1',
-  compressors: ['none'] as ("none" | "snappy" | "zlib" | "zstd")[] // Properly typed array
+  authMechanism: 'SCRAM-SHA-1'
 };
 
 let cachedClient: MongoClient | null = null;
@@ -45,51 +41,19 @@ export default async function connectToDatabase(): Promise<MongoClient> {
   try {
     console.log('Connecting to MongoDB...', { 
       hasUri: !!process.env.MONGODB_URI,
-      uriPrefix: uri.substring(0, 20) + '...',
-      environment: process.env.NODE_ENV,
-      options: {
-        maxPoolSize: options.maxPoolSize,
-        timeouts: {
-          connect: options.connectTimeoutMS,
-          socket: options.socketTimeoutMS,
-          serverSelection: options.serverSelectionTimeoutMS
-        }
-      }
+      environment: process.env.NODE_ENV
     });
 
     const client = new MongoClient(uri, options);
+    cachedClient = await client.connect();
     
-    // Single connection attempt with timeout
-    try {
-      const connectionPromise = client.connect();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), options.connectTimeoutMS)
-      );
-
-      cachedClient = await Promise.race([connectionPromise, timeoutPromise]) as MongoClient;
-      await cachedClient.db().command({ ping: 1 });
-      console.log('Successfully connected to MongoDB');
-      return cachedClient;
-    } catch (error) {
-      await client.close();
-      throw error;
-    }
-
+    await cachedClient.db().command({ ping: 1 });
+    console.log('Successfully connected to MongoDB');
+    
+    return cachedClient;
   } catch (error) {
     console.error('MongoDB connection error:', error);
     cachedClient = null;
-    
-    if (error instanceof Error) {
-      if (error.message.includes('timeout')) {
-        throw new Error('MongoDB connection timeout. Please try again.');
-      }
-      if (error.message.includes('authentication failed')) {
-        throw new Error('MongoDB authentication failed. Check credentials.');
-      }
-      if (error.message.includes('SSL routines')) {
-        throw new Error('SSL connection failed. Please check your connection settings.');
-      }
-    }
-    throw error;
+    throw new Error('Failed to connect to database');
   }
 }

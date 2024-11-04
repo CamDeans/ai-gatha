@@ -14,18 +14,10 @@ export const authConfig: AuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            console.log('Missing credentials');
-            return null;
+            throw new Error('Missing credentials');
           }
 
-          let client;
-          try {
-            client = await connectToDatabase();
-          } catch (error) {
-            console.error('MongoDB connection error:', error);
-            throw new Error('Database connection failed. Please try again.');
-          }
-
+          const client = await connectToDatabase();
           const db = client.db('deansight');
           const users = db.collection("users");
           
@@ -34,15 +26,13 @@ export const authConfig: AuthOptions = {
           });
 
           if (!user) {
-            console.log('User not found:', credentials.email);
-            return null;
+            throw new Error('Invalid email or password');
           }
 
           const isValid = await compare(credentials.password, user.password);
           
           if (!isValid) {
-            console.log('Invalid password for user:', credentials.email);
-            return null;
+            throw new Error('Invalid email or password');
           }
 
           return {
