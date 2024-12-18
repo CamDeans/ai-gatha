@@ -1,49 +1,67 @@
+import { connectToDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth.config';
-import connectToDatabase from '@/lib/mongodb';
-
-interface UserSettings {
-  userId: string;
-  theme?: string;
-  notifications?: boolean;
-  // Add other settings as needed
-}
-
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authConfig);
+    const client = await connectToDatabase();
+    const db = client.db();
+    
+    const settings = await db
+      .collection('settings')
+      .findOne({});
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { 
-        status: 401 
-      });
+    if (!settings) {
+      return NextResponse.json(
+        { error: 'Settings not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(settings);
+
+  } catch (error) {
+    console.error('Failed to fetch settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch settings' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { apiKey } = body;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'API key is required' },
+        { status: 400 }
+      );
     }
 
     const client = await connectToDatabase();
     const db = client.db();
     
-    const settings = await db
-      .collection<UserSettings>("user_settings")
-      .findOne({ userId: session.user.id });
+    const result = await db
+      .collection('settings')
+      .updateOne(
+        {},
+        { $set: { apiKey } },
+        { upsert: true }
+      );
 
-    return NextResponse.json({ 
-      success: true, 
-      settings: settings || {} 
-    });
+    if (!result.acknowledged) {
+      throw new Error('Failed to update settings');
+    }
+
+    return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Settings error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to fetch settings' 
-    }, { 
-      status: 500 
-    });
+    console.error('Failed to update settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to update settings' },
+      { status: 500 }
+    );
   }
 } 
