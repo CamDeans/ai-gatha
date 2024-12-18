@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, ChangeEvent, forwardRef, ComponentProps, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AISparkleIcon } from '../icons/AISparkleIcon';
@@ -11,6 +11,8 @@ import AdvancedPromptControls from '../prompts/AdvancedPromptControls';
 import { Loader } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { PromptTemplate } from "@/lib/prompts/database";
+import { cn } from "@/lib/utils";
+import type { ButtonProps as BaseButtonProps } from '@/components/ui/button';
 
 interface PromptInputProps {
   onImageGenerated: (imageUrl: string | null) => void;
@@ -23,6 +25,37 @@ interface GenerateResponse {
   image?: string;
   error?: string;
 }
+
+// Define proper button props type
+interface ButtonProps extends BaseButtonProps, 
+  Omit<ComponentProps<'button'>, keyof BaseButtonProps> {
+  children?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  onClick?: () => void | Promise<void>;
+  type?: 'button' | 'submit' | 'reset';
+}
+
+// Update the CustomButton component
+const CustomButton = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ children, ...props }, ref) => (
+    <Button ref={ref} {...props}>
+      {children}
+    </Button>
+  )
+);
+
+CustomButton.displayName = 'CustomButton';
+
+// Update the Loader usage
+const StyledLoader = () => (
+  <span className="mr-2">
+    <span className="h-4 w-4 inline-block">
+      <Loader size={16} />
+    </span>
+  </span>
+);
 
 export default function PromptInput({ 
   onImageGenerated, 
@@ -43,7 +76,8 @@ export default function PromptInput({
   const router = useRouter();
   const { toast } = useToast();
 
-  const handlePromptChange = (value: string) => {
+  const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
     setPrompt(value);
     onPromptChange(value);
     if (value.length > 3) {
@@ -55,15 +89,15 @@ export default function PromptInput({
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
+    if (!session?.user?.id) {
       toast({
-        variant: "destructive",
+        variant: "destructive", 
         title: "Error",
-        description: "Please enter a prompt first",
+        description: "Please sign in to generate images",
       });
       return;
     }
-    
+
     setIsGenerating(true);
     try {
       const response = await fetch('/api/generate', {
@@ -71,38 +105,36 @@ export default function PromptInput({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt,
+          userId: session.user.id  // Make sure we're sending userId
+        }),
       });
 
+      const data: GenerateResponse = await response.json();
+      console.log('Generation response:', data);
+
       if (!response.ok) {
-        throw new Error('Failed to generate image');
+        throw new Error(data.error || 'Failed to generate image');
       }
 
-      const data: GenerateResponse = await response.json();
-      console.log('Generation response:', data); // Debug log
-
       if (data.success && data.image) {
-        // Add base64 prefix if not present
-        const imageUrl = data.image.startsWith('data:image') 
-          ? data.image 
-          : `data:image/png;base64,${data.image}`;
-        
-        onImageGenerated(imageUrl);
+        onImageGenerated(data.image);
         toast({
           title: "Success",
           description: "Image generated successfully",
         });
       } else {
-        throw new Error(data.error || 'No image generated');
+        throw new Error('No image data received');
       }
     } catch (error) {
       console.error('Generation error:', error);
-      onImageGenerated(null);
       toast({
         variant: "destructive",
         title: "Error",
         description: error instanceof Error ? error.message : 'Failed to generate image',
       });
+      onImageGenerated(null);
     } finally {
       setIsGenerating(false);
     }
@@ -155,58 +187,60 @@ export default function PromptInput({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2">
+    <div className="space-y-4 max-w-[100%] px-6">
+      <div className="relative">
+        <textarea
+          value={prompt}
+          onChange={handlePromptChange}
+          placeholder="Describe the image you want to generate..."
+          className="w-full min-h-[100px] p-3 rounded-lg border bg-background resize-none"
+        />
+      </div>
+
+      <div className="flex justify-between items-center">
         <div className="flex gap-2">
-          <textarea
-            value={prompt}
-            onChange={(e) => handlePromptChange(e.target.value)}
-            placeholder="Describe the image you want to generate..."
-            className="flex-1 min-h-[100px] p-3 rounded-lg border bg-background resize-none"
-          />
-        </div>
-
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <Button
-              onClick={handleGetIdeas}
-              variant="outline"
-              disabled={prompt.length === 0 || isGenerating}
-            >
-              Get Ideas
-            </Button>
-            <Button
-              onClick={onRefinementClick}
-              variant="outline"
-              disabled={prompt.length === 0 || isGenerating}
-            >
-              Refine Prompt
-            </Button>
-            <Button
-              onClick={handleGenerate}
-              disabled={prompt.length === 0 || isGenerating}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                'Generate Image'
-              )}
-            </Button>
-          </div>
-
-          <Button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            variant="ghost"
-            className="group"
+          <CustomButton
+            onClick={handleGetIdeas}
+            variant="outline"
+            disabled={prompt.length === 0 || isGenerating}
+            type="button"
           >
-            <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-            {showAdvanced ? 'Hide' : 'Show'} Advanced
-          </Button>
+            Get Ideas
+          </CustomButton>
+          <CustomButton
+            onClick={onRefinementClick}
+            variant="outline"
+            disabled={prompt.length === 0 || isGenerating}
+            type="button"
+          >
+            Refine Prompt
+          </CustomButton>
+          <CustomButton
+            onClick={handleGenerate}
+            disabled={prompt.length === 0 || isGenerating}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            type="button"
+          >
+            {isGenerating ? (
+              <>
+                <StyledLoader />
+                Generating...
+              </>
+            ) : (
+              'Generate'
+            )}
+          </CustomButton>
         </div>
+
+        <CustomButton
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          variant="ghost"
+          className="group"
+          type="button"
+        >
+          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+          Advanced Options
+        </CustomButton>
       </div>
 
       {showAdvanced && (

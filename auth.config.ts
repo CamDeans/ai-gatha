@@ -1,15 +1,15 @@
-import type { AuthOptions } from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import { compare } from "bcryptjs"
-import connectToDatabase from "@/lib/mongodb"
+import type { AuthOptions, User } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { compare } from 'bcryptjs';
+import clientPromise from '@/lib/mongodb';
 
 export const authConfig: AuthOptions = {
   providers: [
-    Credentials({
-      name: "Credentials",
+    CredentialsProvider({
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
         try {
@@ -17,32 +17,29 @@ export const authConfig: AuthOptions = {
             throw new Error('Missing credentials');
           }
 
-          const client = await connectToDatabase();
+          const client = await clientPromise;
           const db = client.db('deansight');
-          const users = db.collection("users");
-          
-          const user = await users.findOne({ 
-            email: credentials.email.toLowerCase() 
+          const user = await db.collection('users').findOne({
+            email: credentials.email.toLowerCase()
           });
 
           if (!user) {
-            throw new Error('Invalid email or password');
+            throw new Error('Invalid credentials');
           }
 
           const isValid = await compare(credentials.password, user.password);
-          
           if (!isValid) {
-            throw new Error('Invalid email or password');
+            throw new Error('Invalid credentials');
           }
 
           return {
             id: user._id.toString(),
             email: user.email,
-            name: user.name || null
+            name: user.name
           };
         } catch (error) {
           console.error('Auth error:', error);
-          throw error;
+          return null;
         }
       }
     })
@@ -53,7 +50,7 @@ export const authConfig: AuthOptions = {
     signOut: '/auth/signin'
   },
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
@@ -74,4 +71,4 @@ export const authConfig: AuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development'
-}
+};

@@ -80,78 +80,66 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container max-w-6xl mx-auto p-4">
-      <div className="flex flex-col lg:flex-row gap-8 min-h-[calc(100vh-8rem)]">
-        {/* Left Column - Prompt Input */}
-        <div className="flex-1">
-          <Card className="p-4 h-full">
-            <h2 className="text-lg font-semibold mb-4">Create Image</h2>
-            <PromptInput
-              onImageGenerated={handleImageGenerated}
-              onPromptChange={setCurrentPrompt}
-              onRefinementClick={() => setShowRefinement(true)}
-            />
-          </Card>
-        </div>
+    <div className="space-y-8">
+      {/* Image Generation Section */}
+      <div className="flex flex-col gap-8">
+        <PromptInput
+          onImageGenerated={handleImageGenerated}
+          onPromptChange={setCurrentPrompt}
+          onRefinementClick={() => setShowRefinement(true)}
+        />
 
-        {/* Right Column - Image Display */}
+        {/* Generated Image Display */}
         {(currentImage || isGenerating) && (
-          <div className="flex-1">
-            <Card className="p-4 h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Generated Image</h2>
-                {currentImage && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownload}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleShare}
-                    >
-                      <Share className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                  </div>
-                )}
-              </div>
+          <Card className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Generated Image</h2>
+              {currentImage && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownload}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                  >
+                    <Share className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
+              )}
+            </div>
 
-              <div className="relative aspect-square rounded-lg border bg-muted">
-                {isGenerating ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <LoadingSpinner />
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Generating your image...
-                      </p>
+            <div className="relative aspect-square rounded-lg border bg-muted">
+              {isGenerating ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <LoadingSpinner />
+                </div>
+              ) : currentImage ? (
+                <>
+                  <Image
+                    src={currentImage}
+                    alt={currentPrompt}
+                    fill
+                    className="object-contain rounded-lg cursor-pointer"
+                    onClick={() => setShowFullscreen(true)}
+                    priority
+                  />
+                  {currentPrompt && (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent text-white rounded-b-lg">
+                      <p className="text-sm">{currentPrompt}</p>
                     </div>
-                  </div>
-                ) : currentImage ? (
-                  <>
-                    <Image
-                      src={currentImage}
-                      alt={currentPrompt}
-                      fill
-                      className="object-contain rounded-lg cursor-pointer"
-                      onClick={() => setShowFullscreen(true)}
-                      priority
-                    />
-                    {currentPrompt && (
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent text-white rounded-b-lg">
-                        <p className="text-sm">{currentPrompt}</p>
-                      </div>
-                    )}
-                  </>
-                ) : null}
-              </div>
-            </Card>
-          </div>
+                  )}
+                </>
+              ) : null}
+            </div>
+          </Card>
         )}
       </div>
 

@@ -1,22 +1,24 @@
-interface ErrorMessageProps {
+interface ErrorProps {
+  title?: string;
   message: string;
   retry?: () => void;
 }
 
-export function ErrorMessage({ message, retry }: ErrorMessageProps) {
+export function ErrorMessage({ title = 'Error', message, retry }: ErrorProps) {
   return (
-    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-destructive">{message}</span>
+    <div className="rounded-lg border border-destructive p-4">
+      <div className="flex flex-col gap-2">
+        <h3 className="font-semibold">{title}</h3>
+        <p className="text-sm text-muted-foreground">{message}</p>
         {retry && (
           <button
             onClick={retry}
-            className="text-sm text-destructive underline hover:text-destructive/80"
+            className="text-sm text-primary hover:underline"
           >
             Try again
           </button>
         )}
       </div>
     </div>
-  )
+  );
 } 

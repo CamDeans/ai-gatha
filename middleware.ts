@@ -34,7 +34,9 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/generate',
+    '/api/gallery/:path*',
     '/api/user/:path*',
+    // Protected pages but allow API routes
     '/((?!auth|api|_next/static|_next/image|favicon.ico).*)',
   ]
 } 

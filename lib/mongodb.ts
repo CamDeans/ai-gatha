@@ -4,56 +4,39 @@
 import { MongoClient, MongoClientOptions } from 'mongodb'
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
+  throw new Error('Please add your Mongo URI to .env.local');
 }
 
 const uri = process.env.MONGODB_URI;
+console.log('MongoDB URI:', uri.replace(/:[^:]*@/, ':****@')); // Logs URI without password
 
-// Production-ready MongoDB options
 const options: MongoClientOptions = {
-  maxPoolSize: 1,
-  minPoolSize: 1,
-  connectTimeoutMS: 60000,
-  socketTimeoutMS: 60000,
-  serverSelectionTimeoutMS: 60000,
-  retryWrites: true,
-  retryReads: true,
-  w: 'majority',
-  tls: true,
-  authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1'
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  maxIdleTimeMS: 60000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 20000,
 };
 
-let cachedClient: MongoClient | null = null;
+let client: MongoClient | null = null;
+let clientPromise: Promise<MongoClient>;
 
-export default async function connectToDatabase(): Promise<MongoClient> {
-  if (cachedClient) {
-    try {
-      await cachedClient.db().command({ ping: 1 });
-      return cachedClient;
-    } catch (error) {
-      console.log('Cached connection failed, creating new connection');
-      await cachedClient.close();
-      cachedClient = null;
-    }
+if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a global variable so that the value
+  // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>;
+  };
+
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options);
+    globalWithMongo._mongoClientPromise = client.connect();
   }
-
-  try {
-    console.log('Connecting to MongoDB...', { 
-      hasUri: !!process.env.MONGODB_URI,
-      environment: process.env.NODE_ENV
-    });
-
-    const client = new MongoClient(uri, options);
-    cachedClient = await client.connect();
-    
-    await cachedClient.db().command({ ping: 1 });
-    console.log('Successfully connected to MongoDB');
-    
-    return cachedClient;
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    cachedClient = null;
-    throw new Error('Failed to connect to database');
-  }
+  clientPromise = globalWithMongo._mongoClientPromise;
+} else {
+  // In production mode, it's best to not use a global variable.
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
 }
+
+export default clientPromise;
