@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Download, Trash2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ImageDisplayProps {
   id: string;
@@ -19,46 +20,35 @@ interface ImageDisplayProps {
 export default function ImageDisplay({ 
   id,
   prompt, 
-  imageUrl, 
+  imageUrl,
   createdAt,
   onDelete,
   onClick,
-  priority = false
+  priority = false 
 }: ImageDisplayProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fullImageUrl = imageUrl.startsWith('data:') 
-    ? imageUrl 
-    : `data:image/png;base64,${imageUrl}`;
-
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(fullImageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `image-${id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading image:', error);
-    }
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onClick
     if (!onDelete) return;
-    setIsDeleting(true);
+
     try {
+      setIsDeleting(true);
       await onDelete(id);
+      toast.success('Image deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+      toast.error('Failed to delete image');
     } finally {
       setIsDeleting(false);
     }
   };
+
+  const fullImageUrl = imageUrl.startsWith('data:') 
+    ? imageUrl 
+    : `data:image/png;base64,${imageUrl}`;
 
   return (
     <div className="relative">
@@ -92,34 +82,23 @@ export default function ImageDisplay({
                 setError('Failed to load image');
                 setIsLoading(false);
               }}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               unoptimized={true}
             />
             
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="absolute top-2 right-2 flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownload();
-                  }}
-                  size="icon"
-                  className="h-8 w-8"
-                >
-                  <Download size={16} />
-                </Button>
                 {onDelete && (
                   <Button
                     variant="destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete();
-                    }}
                     size="icon"
-                    className="h-8 w-8"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
                   >
-                    <Trash2 size={16} />
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 )}
               </div>

@@ -91,10 +91,11 @@ export default function Gallery() {
         throw new Error('Failed to delete image');
       }
 
-      setImages(prev => prev.filter(image => image.id !== id));
-      toast.success('Image deleted successfully');
-    } catch (err) {
-      toast.error('Failed to delete image');
+      setImages(images.filter(img => img.id !== id));
+      
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      throw error;
     }
   };
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
-import prismadb from '@/lib/prismadb';
 import { ObjectId } from 'mongodb';
+import clientPromise from '@/lib/mongodb';
 
 export async function GET(
   req: Request,
@@ -13,37 +13,17 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Log for debugging
-    console.log('Fetching image:', {
-      imageId: params.id,
-      userId: session.user.id
-    });
-
     // Validate ObjectId
     if (!ObjectId.isValid(params.id)) {
-      console.error('Invalid ObjectId:', params.id);
       return new NextResponse("Invalid image ID", { status: 400 });
     }
 
-    const image = await prismadb.image.findFirst({
-      where: {
-        id: params.id,
-        userId: session.user.id,
-      },
-      select: {
-        id: true,
-        imageUrl: true,
-        prompt: true,
-        userId: true,
-      },
-    });
+    const client = await clientPromise;
+    const db = client.db('deansight');
 
-    // Log for debugging
-    console.log('Found image:', {
-      found: !!image,
-      hasUrl: image?.imageUrl ? 'yes' : 'no',
-      userId: image?.userId,
-      requestUserId: session.user.id
+    const image = await db.collection('images').findOne({
+      _id: new ObjectId(params.id),
+      userId: session.user.id
     });
 
     if (!image) {
@@ -71,7 +51,6 @@ export async function GET(
       return NextResponse.redirect(image.imageUrl);
     }
 
-    // If neither base64 nor URL, return error
     return new NextResponse("Invalid image format", { status: 400 });
 
   } catch (error) {
@@ -90,14 +69,49 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const image = await prismadb.image.delete({
-      where: {
-        id: params.id,
-        userId: session.user.id,
-      },
+    // Validate ObjectId
+    if (!ObjectId.isValid(params.id)) {
+      return new NextResponse("Invalid image ID", { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db('deansight');
+
+    // Log for debugging
+    console.log('Attempting to delete image:', {
+      imageId: params.id,
+      userId: session.user.id,
+      database: db.databaseName
     });
 
-    return NextResponse.json(image);
+    // First, find the image to verify it exists and belongs to the user
+    const image = await db.collection('images').findOne({
+      _id: new ObjectId(params.id)
+    });
+
+    console.log('Found image:', image);
+
+    if (!image) {
+      return new NextResponse("Image not found", { status: 404 });
+    }
+
+    // Verify ownership
+    if (image.userId.toString() !== session.user.id) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const result = await db.collection('images').deleteOne({
+      _id: new ObjectId(params.id)
+    });
+
+    // Log the result
+    console.log('Delete result:', result);
+
+    if (result.deletedCount === 0) {
+      return new NextResponse("Image not found", { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[IMAGE_DELETE]', error);
     return new NextResponse("Internal error", { status: 500 });
