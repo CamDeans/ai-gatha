@@ -1,27 +1,19 @@
 /**
  * MongoDB client configuration and connection management
  */
-import { MongoClient, MongoClientOptions } from 'mongodb'
+import { MongoClient } from "mongodb";
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your Mongo URI to .env.local');
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
 }
 
 const uri = process.env.MONGODB_URI;
-console.log('MongoDB URI:', uri.replace(/:[^:]*@/, ':****@')); // Logs URI without password
+const options = {};
 
-const options: MongoClientOptions = {
-  maxPoolSize: 10,
-  minPoolSize: 5,
-  maxIdleTimeMS: 60000,
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 20000,
-};
-
-let client: MongoClient | null = null;
+let client;
 let clientPromise: Promise<MongoClient>;
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
   let globalWithMongo = global as typeof globalThis & {

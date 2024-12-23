@@ -6,7 +6,9 @@ import { useSession } from 'next-auth/react';
 import ImageDisplay from '@/components/ImageDisplay';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 interface Image {
   id: string;
@@ -22,79 +24,66 @@ export default function Gallery() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   
   const { ref, inView } = useInView();
-  const { data: session, status } = useSession();
-  console.log('Current session:', session, 'Status:', status);
+  const { data: session } = useSession();
 
   const fetchImages = useCallback(async (pageNum: number = 1) => {
-    if (!session?.user?.id) {
-      console.log('No session available, skipping fetch');
-      return;
-    }
+    if (!session?.user?.id) return;
 
     try {
       setLoading(true);
-      console.log('Fetching images for user:', session.user.id);
-      
-      const response = await fetch(`/api/gallery?page=${pageNum}&limit=12&userId=${session.user.id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      
-      if (data.success && Array.isArray(data.images)) {
-        console.log('Received images:', data.images.map((img: Image) => ({
-          id: img.id,
-          userId: img.userId,
-          promptLength: img.prompt?.length,
-          imageUrlLength: img.imageUrl?.length,
-          hasDataPrefix: img.imageUrl?.startsWith('data:'),
-          createdAt: img.createdAt,
-          matchesSession: img.userId === session.user.id
-        })));
+      const response = await fetch(
+        `/api/gallery?page=${pageNum}&limit=12&userId=${session.user.id}`,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-        const filteredImages = data.images.filter((img: Image) => img.userId === session.user.id);
-        setImages(prev => pageNum === 1 ? filteredImages : [...prev, ...filteredImages]);
-        
-        if (filteredImages.length !== data.images.length) {
-          console.warn('Some images were filtered out due to userId mismatch');
-        }
-        
-        setHasMore(data.hasMore);
-        setPage(pageNum);
-      } else {
-        console.error('Invalid response format:', data);
-        throw new Error('Invalid response format');
+      if (!response.ok) {
+        throw new Error('Failed to fetch images');
       }
+
+      const data = await response.json();
+      console.log('Fetched images:', data);
+
+      const imageArray = Array.isArray(data) ? data : data.images || [];
+      
+      if (pageNum === 1) {
+        setImages(imageArray);
+      } else {
+        setImages(prev => [...prev, ...imageArray]);
+      }
+      
+      setHasMore(imageArray.length === 12);
     } catch (err) {
-      console.error('Gallery error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load gallery');
-      toast.error('Failed to load gallery');
+      console.error('Error fetching images:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch images');
+      toast.error('Failed to load images');
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      console.log('Session authenticated, fetching images...');
+    if (session?.user?.id) {
       fetchImages(1);
     }
-  }, [status, session, fetchImages]);
+  }, [fetchImages, session?.user?.id]);
 
   useEffect(() => {
     if (inView && hasMore && !loading && session?.user?.id) {
-      fetchImages(page + 1);
+      setPage(prev => {
+        const nextPage = prev + 1;
+        fetchImages(nextPage);
+        return nextPage;
+      });
     }
-  }, [inView, hasMore, loading, page, fetchImages, session]);
+  }, [inView, hasMore, loading, fetchImages, session?.user?.id]);
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/gallery/${id}`, {
+      const response = await fetch(`/api/images/${id}`, {
         method: 'DELETE',
       });
 
@@ -102,14 +91,14 @@ export default function Gallery() {
         throw new Error('Failed to delete image');
       }
 
-      setImages(prev => prev.filter(img => img.id !== id));
+      setImages(prev => prev.filter(image => image.id !== id));
       toast.success('Image deleted successfully');
     } catch (err) {
       toast.error('Failed to delete image');
     }
   };
 
-  if (status === 'loading' || (loading && images.length === 0)) {
+  if (loading && !images.length) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <LoadingSpinner />
@@ -117,7 +106,7 @@ export default function Gallery() {
     );
   }
 
-  if (error && images.length === 0) {
+  if (error && !images.length) {
     return (
       <div className="p-4">
         <ErrorMessage 
@@ -129,40 +118,70 @@ export default function Gallery() {
     );
   }
 
-  if (!loading && images.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-4">
-        <p className="text-lg text-muted-foreground">No images found</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Generate some images to see them here
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8 p-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {images.map(({ id, prompt, imageUrl, createdAt }) => (
-          <div key={id}>
-            <ImageDisplay 
-              id={id}
-              prompt={prompt}
-              imageUrl={imageUrl}
-              createdAt={createdAt}
-              onDelete={handleDelete}
-            />
+    <>
+      <div className="container mx-auto px-4 py-8">
+        {(!images || images.length === 0) && !loading ? (
+          <div className="text-center">
+            <p className="text-muted-foreground">No images found</p>
           </div>
-        ))}
-      </div>
-      
-      {/* Loading/Intersection Observer trigger */}
-      <div ref={ref} className="h-10 flex items-center justify-center">
-        {loading && <LoadingSpinner />}
-        {!hasMore && images.length > 0 && (
-          <p className="text-sm text-muted-foreground">No more images to load</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.isArray(images) && images.map((image, index) => (
+              <ImageDisplay 
+                key={image.id}
+                {...image}
+                onDelete={handleDelete}
+                onClick={() => setSelectedImage(image)}
+                priority={index < 4}
+              />
+            ))}
+          </div>
         )}
+        
+        <div ref={ref} className="h-10 flex items-center justify-center">
+          {loading && <LoadingSpinner />}
+          {!hasMore && images.length > 0 && (
+            <p className="text-sm text-muted-foreground">No more images to load</p>
+          )}
+        </div>
       </div>
-    </div>
+
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          {selectedImage && (
+            <div className="space-y-4">
+              <div className="relative aspect-square w-full">
+                {previewLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                    <LoadingSpinner />
+                  </div>
+                )}
+                <Image
+                  src={selectedImage.imageUrl}
+                  alt={selectedImage.prompt}
+                  fill
+                  className="object-contain"
+                  priority
+                  onLoadStart={() => setPreviewLoading(true)}
+                  onLoadingComplete={() => setPreviewLoading(false)}
+                  onError={() => {
+                    setPreviewLoading(false);
+                    toast.error('Failed to load image preview');
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="font-medium">Prompt</p>
+                <p className="text-sm text-muted-foreground">{selectedImage.prompt}</p>
+                <p className="text-xs text-muted-foreground">
+                  Created on {new Date(selectedImage.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 } 

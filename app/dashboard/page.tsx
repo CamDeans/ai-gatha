@@ -20,10 +20,14 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const handleImageGenerated = (imageUrl: string | null) => {
-    setCurrentImage(imageUrl);
+    const formattedImage = imageUrl?.startsWith('data:') 
+      ? imageUrl 
+      : imageUrl ? `data:image/png;base64,${imageUrl}` : null;
+      
+    setCurrentImage(formattedImage);
     setIsGenerating(false);
     
-    if (!imageUrl) {
+    if (!formattedImage) {
       toast({
         variant: "destructive",
         title: "Generation failed",
@@ -53,6 +57,7 @@ export default function Dashboard() {
         description: "Your image is being downloaded.",
       });
     } catch (error) {
+      console.error('Error downloading image:', error);
       toast({
         variant: "destructive",
         title: "Download failed",
@@ -76,6 +81,22 @@ export default function Dashboard() {
         title: "Share failed",
         description: "Failed to copy link. Please try again.",
       });
+    }
+  };
+
+  const fetchImages = async () => {
+    try {
+      const response = await fetch('/api/images');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Images are already base64 encoded from the API
+        return data.images;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      return [];
     }
   };
 
@@ -130,6 +151,7 @@ export default function Dashboard() {
                     className="object-contain rounded-lg cursor-pointer"
                     onClick={() => setShowFullscreen(true)}
                     priority
+                    unoptimized={true}
                   />
                   {currentPrompt && (
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent text-white rounded-b-lg">

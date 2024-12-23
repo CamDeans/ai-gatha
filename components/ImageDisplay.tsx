@@ -1,86 +1,53 @@
 'use client';
 
-import { useState, type ComponentProps } from 'react';
-import type { MouseEventHandler } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { Download, Trash2, type LucideIcon } from 'lucide-react';
-import { Button, type ButtonProps as BaseButtonProps } from './ui/button';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Download, Trash2, Loader2 } from 'lucide-react';
+import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
 interface ImageDisplayProps {
-  imageUrl: string;
-  prompt: string;
-  createdAt: string;
   id: string;
+  prompt: string;
+  imageUrl: string;
+  createdAt: string;
   onDelete?: (id: string) => Promise<void>;
+  onClick?: () => void;
+  priority?: boolean;
 }
 
-// Button props type
-type ButtonProps = BaseButtonProps & {
-  className?: string;
-  onClick?: MouseEventHandler<HTMLButtonElement>;
-};
-
-// Action button props
-type ActionButtonProps = Omit<ButtonProps, 'onClick'> & {
-  icon: LucideIcon;
-  onClick?: () => void | Promise<void>;
-};
-
-const ActionButton = ({
-  icon: Icon,
-  onClick,
-  variant = "secondary",
-  className,
-  ...props
-}: ActionButtonProps) => {
-  const handleClick: MouseEventHandler<HTMLButtonElement> = async (e) => {
-    if (onClick) {
-      await onClick();
-    }
-  };
-  
-  return (
-    <Button
-      variant={variant}
-      onClick={handleClick}
-      size="icon"
-      className={cn("h-8 w-8", className)}
-      {...props}
-    >
-      <Icon 
-        size={16}
-        strokeWidth={2}
-      />
-    </Button>
-  );
-};
-
 export default function ImageDisplay({ 
-  imageUrl, 
-  prompt, 
-  createdAt, 
   id,
-  onDelete 
+  prompt, 
+  imageUrl, 
+  createdAt,
+  onDelete,
+  onClick,
+  priority = false
 }: ImageDisplayProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Convert base64 to data URL if needed
   const fullImageUrl = imageUrl.startsWith('data:') 
     ? imageUrl 
-    : `data:image/jpeg;base64,${imageUrl}`;
+    : `data:image/png;base64,${imageUrl}`;
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = fullImageUrl;
-    link.download = `${prompt.slice(0, 30)}-${id}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(fullImageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `image-${id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
   };
 
   const handleDelete = async () => {
@@ -94,67 +61,85 @@ export default function ImageDisplay({
   };
 
   return (
-    <>
-      <div className="group relative">
-        <div
-          className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-200"
-          onClick={() => setIsExpanded(true)}
-        >
-          <Image
-            src={fullImageUrl}
-            alt={prompt}
-            fill
-            className={cn(
-              'object-cover transition-all hover:scale-105',
-              isDeleting && 'opacity-50'
-            )}
-          />
-          
-          {/* Overlay with buttons */}
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="absolute top-2 right-2 flex gap-2">
-              <ActionButton
-                icon={Download}
-                onClick={handleDownload}
-              />
-              {onDelete && (
-                <ActionButton
-                  icon={Trash2}
-                  onClick={handleDelete}
-                  variant="destructive"
-                />
-              )}
-            </div>
-            
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-              <p className="text-sm text-white">{prompt}</p>
-              <p className="text-xs text-white/70">
-                {new Date(createdAt).toLocaleDateString()}
-              </p>
-            </div>
+    <div className="relative">
+      <div 
+        className={cn(
+          "relative aspect-square rounded-lg overflow-hidden bg-background/50",
+          onClick && "cursor-pointer group"
+        )}
+        onClick={onClick}
+      >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+            <Loader2 className="h-6 w-6 animate-spin" />
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Expanded view dialog */}
-      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-        <DialogContent className="max-w-4xl">
-          <div className="relative aspect-square w-full">
+        {!error && (
+          <div className="relative h-full">
             <Image
               src={fullImageUrl}
               alt={prompt}
               fill
-              className="object-contain"
+              className={cn(
+                "object-cover",
+                onClick && "group-hover:opacity-75 transition-opacity duration-200"
+              )}
+              priority={priority}
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                console.error('Failed to load image:', fullImageUrl.substring(0, 100) + '...');
+                setError('Failed to load image');
+                setIsLoading(false);
+              }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              unoptimized={true}
             />
+            
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload();
+                  }}
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  <Download size={16} />
+                </Button>
+                {onDelete && (
+                  <Button
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    size="icon"
+                    className="h-8 w-8"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
+              </div>
+              
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                <p className="text-sm text-white">{prompt}</p>
+                <p className="text-xs text-white/70">
+                  {new Date(createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="mt-4">
-            <p className="font-medium">{prompt}</p>
-            <p className="text-sm text-muted-foreground">
-              {new Date(createdAt).toLocaleDateString()}
-            </p>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+      </div>
+    </div>
   );
 } 
