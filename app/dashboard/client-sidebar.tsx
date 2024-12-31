@@ -13,7 +13,7 @@ export default function ClientSidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-16 left-4 z-50 sm:hidden p-2 h-10 w-10 hover:bg-accent"
+        className="fixed bottom-4 left-4 z-50 sm:hidden p-2 h-12 w-12 hover:bg-accent rounded-full shadow-md bg-background"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle menu"
       >
@@ -26,8 +26,8 @@ export default function ClientSidebar() {
         sm:relative sm:translate-x-0
         transition duration-200 ease-in-out
         bg-background border-r
-        w-72 pt-20 pb-4
-        sm:w-64 sm:pt-14
+        w-72 pt-14 pb-4
+        sm:w-64
         sm:block
         overflow-y-auto
         shadow-lg sm:shadow-none
