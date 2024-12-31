@@ -1,15 +1,22 @@
-import type { AuthConfig } from "next-auth";
+import type { DefaultSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
-import type { Session } from "next-auth";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
+
+declare module "next-auth" {
+  interface Session extends DefaultSession {
+    user: {
+      id: string;
+    } & DefaultSession["user"];
+  }
+}
 
 interface AuthorizedCallback {
   auth: { user?: { id: string } };
   request: { nextUrl: URL };
 }
 
-export const authConfig: AuthConfig = {
+export const authConfig = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -46,11 +53,11 @@ export const authConfig: AuthConfig = {
       }
       return token;
     },
-    session({ session, token }: { session: Session; token: JWT }) {
+    session({ session, token }: { session: DefaultSession; token: JWT & { id: string } }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        (session.user as any).id = token.id;
       }
       return session;
     },
   },
-}
+} as const;
