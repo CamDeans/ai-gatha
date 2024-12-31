@@ -1,11 +1,13 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { config } from '@/auth';
+import { authOptions } from '@/auth';
 import { getAllImages } from '@/lib/services/imageService';
 
 export async function GET() {
   try {
-    const session = await getServerSession(config);
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

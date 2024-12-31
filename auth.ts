@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import { authConfig } from "./auth.config";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
@@ -8,7 +8,7 @@ if (!process.env.NEXTAUTH_SECRET) {
   throw new Error("Please provide process.env.NEXTAUTH_SECRET");
 }
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   ...authConfig,
   adapter: MongoDBAdapter(clientPromise, {
     databaseName: 'aigatha',
