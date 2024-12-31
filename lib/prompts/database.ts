@@ -4,6 +4,9 @@ export interface PromptTemplate {
   template: string;
   tags: string[];
   style: string;
+  examples?: string[];
+  modifiers?: string[];
+  weight?: number; // For ranking suggestions
 }
 
 export const promptTemplates: PromptTemplate[] = [
@@ -13,14 +16,26 @@ export const promptTemplates: PromptTemplate[] = [
     category: 'Art',
     template: 'A {subject} in the style of {artist}, {medium}, {lighting}',
     tags: ['art', 'painting', 'creative'],
-    style: 'artistic'
+    style: 'artistic',
+    examples: [
+      'A sunset in the style of Van Gogh, oil painting, warm lighting',
+      'A portrait in the style of Rembrandt, charcoal, dramatic lighting'
+    ],
+    modifiers: ['detailed', 'masterpiece', 'trending on artstation'],
+    weight: 1.0
   },
   {
     id: 'design-1',
     category: 'Design',
     template: 'Modern {object} design, minimalist, {color} scheme, {material}',
     tags: ['design', 'product', 'minimal'],
-    style: 'modern'
+    style: 'modern',
+    examples: [
+      'Modern chair design, minimalist, monochrome scheme, brushed steel',
+      'Modern lamp design, minimalist, warm color scheme, wood and glass'
+    ],
+    modifiers: ['clean lines', 'professional', '8k render'],
+    weight: 0.8
   },
 
   // Business & Marketing

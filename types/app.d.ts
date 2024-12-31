@@ -18,9 +18,8 @@ interface Image {
 }
 
 interface UserSettings {
-  id: string;
   userId: string;
-  theme: 'light' | 'dark' | 'system';
+  runpodApiKey?: string;
   imageSize: '512x512' | '768x768' | '1024x1024';
   defaultModel: 'stable-diffusion' | 'dall-e' | 'midjourney';
   promptHistory: boolean;

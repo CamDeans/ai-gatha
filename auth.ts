@@ -1,7 +1,11 @@
-import { getServerSession } from "next-auth"
-import type { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next"
-import { authConfig } from "./auth.config"
+import NextAuth from 'next-auth';
+import { getServerSession } from 'next-auth';
+import { authConfig } from './auth.config';
 
-export function auth(...args: [GetServerSidePropsContext["req"], GetServerSidePropsContext["res"]] | [NextApiRequest, NextApiResponse] | []) {
-  return getServerSession(...args, authConfig)
+export const { signIn, signOut } = NextAuth(authConfig);
+
+// This is a server-side function
+export async function auth() {
+  const session = await getServerSession(authConfig);
+  return session;
 } 

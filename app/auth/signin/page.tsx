@@ -1,81 +1,67 @@
-/**
- * Sign-in page component
- * Handles user authentication with email/password
- */
-'use client'
+import { Metadata } from "next"
+import Link from "next/link"
+import { SignInButtons } from "@/components/auth/SignInButtons"
+import { Button } from "@/components/ui/button"
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Loader } from 'lucide-react'
-import { toast } from 'sonner'
+export const metadata: Metadata = {
+  title: 'Sign In - AI|Gatha',
+  description: 'Sign in to your AI|Gatha account',
+}
 
-export default function SignIn() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        toast.error(result.error)
-        return
-      }
-
-      router.push('/dashboard')
-      toast.success('Successfully signed in!')
-    } catch (error) {
-      toast.error('An error occurred during sign in')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+export default function SignInPage() {
   return (
-    <div className="max-w-md mx-auto p-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          required
-          className="w-full p-2 border rounded"
-        />
-        <Button 
-          type="submit" 
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? (
-            <>
-              <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            'Sign in'
-          )}
-        </Button>
-      </form>
+    <div className="min-h-screen flex flex-col bg-background">
+      <header className="w-full border-b">
+        <div className="flex h-14 items-center justify-end px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              Don't have an account?
+            </span>
+            <Button 
+              asChild
+              className="bg-primary text-primary-foreground shadow hover:bg-primary/90"
+            >
+              <Link href="/auth/signup">
+                Sign up
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-muted-foreground">
+              Sign in to continue creating stunning AI art
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <SignInButtons />
+
+            <div className="text-center text-xs text-muted-foreground">
+              By continuing, you agree to our{" "}
+              <Link 
+                href="/terms" 
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link 
+                href="/privacy" 
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Privacy Policy
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 } 

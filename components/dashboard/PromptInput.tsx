@@ -9,10 +9,10 @@ import { PromptEngineer } from '@/lib/prompts/engineer';
 import PromptModal from '../prompts/PromptModal';
 import AdvancedPromptControls from '../prompts/AdvancedPromptControls';
 import { Loader } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
 import { PromptTemplate } from "@/lib/prompts/database";
 import { cn } from "@/lib/utils";
 import type { ButtonProps as BaseButtonProps } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface PromptInputProps {
   onImageGenerated: (imageUrl: string | null) => void;
@@ -71,10 +71,10 @@ export default function PromptInput({
     confidence: number;
     template: PromptTemplate;
   }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { data: session } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
 
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -88,78 +88,55 @@ export default function PromptInput({
     }
   };
 
-  const handleGenerate = async () => {
-    if (!session?.user?.id) {
-      toast({
-        variant: "destructive", 
-        title: "Error",
-        description: "Please sign in to generate images",
-      });
+  const handleGenerate = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    
+    if (!prompt.trim()) {
+      toast.error("Please enter a description of the image you want to generate");
       return;
     }
 
-    setIsGenerating(true);
     try {
+      setIsLoading(true);
+      
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt,
-          userId: session.user.id  // Make sure we're sending userId
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
-      const data: GenerateResponse = await response.json();
-      console.log('Generation response:', data);
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate image');
       }
 
-      if (data.success && data.image) {
-        onImageGenerated(data.image);
-        toast({
-          title: "Success",
-          description: "Image generated successfully",
-        });
-      } else {
-        throw new Error('No image data received');
-      }
+      toast.success("Image generated successfully!");
+      onImageGenerated(data.image);
+      
     } catch (error) {
       console.error('Generation error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to generate image',
-      });
-      onImageGenerated(null);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate image');
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
   };
 
   const handleGetIdeas = useCallback(() => {
     if (!prompt.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter a prompt first",
-      });
+      toast.error("Please enter a prompt first");
       return;
     }
 
     try {
-      // Generate suggestions using the current prompt
       const ideas = PromptEngineer.generatePromptSuggestions(prompt);
       
       if (ideas.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "No suggestions",
-          description: "No suggestions available for this prompt. Try being more specific.",
-        });
+        toast.error("No suggestions available for this prompt. Try being more specific.");
         return;
       }
 
@@ -168,22 +145,15 @@ export default function PromptInput({
       
     } catch (error) {
       console.error('Error generating ideas:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to generate ideas. Please try again.",
-      });
+      toast.error("Failed to generate ideas. Please try again.");
     }
-  }, [prompt, toast]);
+  }, [prompt]);
 
   const handleSelectIdea = (selectedPrompt: string) => {
     setPrompt(selectedPrompt);
     onPromptChange(selectedPrompt);
     setShowIdeasModal(false);
-    toast({
-      title: "Prompt selected",
-      description: "The prompt has been updated with your selection.",
-    });
+    toast.success("The prompt has been updated with your selection");
   };
 
   return (
@@ -216,7 +186,7 @@ export default function PromptInput({
             Refine Prompt
           </CustomButton>
           <CustomButton
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={prompt.length === 0 || isGenerating}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
             type="button"
@@ -227,7 +197,10 @@ export default function PromptInput({
                 Generating...
               </>
             ) : (
-              'Generate'
+              <>
+                <AISparkleIcon className="mr-2 h-4 w-4" />
+                Generate
+              </>
             )}
           </CustomButton>
         </div>

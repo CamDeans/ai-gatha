@@ -1,66 +1,28 @@
-/**
- * NextAuth middleware configuration
- * Protects routes that require authentication
- */
-import { withAuth } from "next-auth/middleware";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export default withAuth(
-  function middleware(req) {
-    // Add security headers
-    const response = NextResponse.next();
-    response.headers.set("X-Frame-Options", "DENY");
-    response.headers.set("X-Content-Type-Options", "nosniff");
-    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    return response;
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token
-    },
-    pages: {
-      signIn: '/auth/signin',
-      error: '/auth/error',
-      signOut: '/auth/signin',
-    }
+export function middleware(request: NextRequest) {
+  // Check for session token
+  const sessionToken = request.cookies.get('next-auth.session-token')?.value ||
+                      request.cookies.get('__Secure-next-auth.session-token')?.value
+
+  // Skip auth check for public routes
+  if (request.nextUrl.pathname.startsWith('/auth') || 
+      request.nextUrl.pathname.startsWith('/_next') ||
+      request.nextUrl.pathname.startsWith('/api')) {
+    return NextResponse.next()
   }
-);
 
-/**
- * Configure which routes are protected by authentication
- * Any route matching these patterns will require authentication
- */
-export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/api/generate',
-    '/api/gallery/:path*',
-    '/api/user/:path*',
-    // Protected pages but allow API routes
-    '/((?!auth|api|_next/static|_next/image|favicon.ico).*)',
-  ]
-} 
+  // If no session token, redirect to sign in
+  if (!sessionToken) {
+    const signInUrl = new URL('/auth/signin', request.url)
+    signInUrl.searchParams.set('callbackUrl', request.nextUrl.pathname)
+    return NextResponse.redirect(signInUrl)
+  }
 
-/**
- * CORS middleware configuration
- * Adds CORS headers to API routes
- */
-export function corsMiddleware(request: NextRequest) {
-  const response = NextResponse.next();
-
-  // Add CORS headers
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  return response;
+  return NextResponse.next()
 }
 
-/**
- * Configure which routes are protected by CORS
- * Any route matching these patterns will require CORS headers
- */
-export const corsConfig = {
-  matcher: '/api/:path*',
-}; 
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+}

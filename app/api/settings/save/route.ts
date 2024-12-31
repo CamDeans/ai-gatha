@@ -1,26 +1,29 @@
 import { connectToDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth.config';
+import { auth } from "@/auth";
+import { Collection } from 'mongodb';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authConfig);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const settings = await req.json();
-    const client = await connectToDatabase();
-    const db = client.db();
+    const data = await request.json();
+    const { db } = await connectToDatabase();
 
-    const result = await db.collection('user_settings').updateOne(
+    const userSettings: Collection = db.collection('user_settings');
+    
+    // Save settings to user_settings collection
+    const result = await userSettings.updateOne(
       { userId: session.user.id },
-      { $set: settings },
+      { 
+        $set: {
+          ...data,
+          updatedAt: new Date()
+        }
+      },
       { upsert: true }
     );
 
@@ -29,7 +32,6 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error('Failed to save settings:', error);
     return NextResponse.json(
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authConfig);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -50,9 +52,7 @@ export async function GET() {
       );
     }
 
-    const client = await connectToDatabase();
-    const db = client.db();
-
+    const { db } = await connectToDatabase();
     const settings = await db
       .collection('user_settings')
       .findOne({ userId: session.user.id });

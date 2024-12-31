@@ -9,20 +9,24 @@ const RUNPOD_BASE_URL = 'https://api.runpod.ai/v2';
 const MAX_RETRIES = 180;
 const RETRY_DELAY = 1000;
 
-interface RunPodResponse {
-  id: string;
-  status: 'IN_QUEUE' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
-  output?: Array<{
-    image: string;
-    seed: number;
-  }>;
+interface RunpodRequest {
+  prompt: string;
+  apiKey: string;
+  // Add other settings as needed
+}
+
+interface RunpodResponse {
+  success: boolean;
+  image?: string;
   error?: string;
+  status?: string;
+  output?: string[];
 }
 
 /**
  * Fetches the status of a RunPod job
  */
-async function checkStatus(jobId: string): Promise<RunPodResponse> {
+async function checkStatus(jobId: string): Promise<RunpodResponse> {
   const response = await fetch(`${RUNPOD_BASE_URL}/${RUNPOD_ENDPOINT_ID}/status/${jobId}`, {
     headers: {
       'Authorization': `Bearer ${RUNPOD_API_KEY}`
@@ -39,7 +43,7 @@ async function checkStatus(jobId: string): Promise<RunPodResponse> {
 /**
  * Polls the status of a RunPod job until completion
  */
-async function pollStatus(jobId: string, attempt = 1): Promise<RunPodResponse> {
+async function pollStatus(jobId: string, attempt = 1): Promise<RunpodResponse> {
   if (attempt > MAX_RETRIES) {
     throw new Error('Generation timed out');
   }
@@ -65,39 +69,40 @@ async function pollStatus(jobId: string, attempt = 1): Promise<RunPodResponse> {
 /**
  * Generates an image using RunPod
  */
-export async function runpodFetch(prompt: string): Promise<RunPodResponse> {
-  // Log configuration for debugging
-  console.log('RunPod Config:', {
-    endpointUrl: `${RUNPOD_BASE_URL}/${RUNPOD_ENDPOINT_ID}`,
-    hasApiKey: !!RUNPOD_API_KEY
-  });
+export async function runpodFetch(request: RunpodRequest): Promise<RunpodResponse> {
+  const { prompt, apiKey } = request;
+  
+  try {
+    const response = await fetch('https://api.runpod.ai/v2/stable-diffusion-v1/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        input: {
+          prompt,
+          num_inference_steps: 50,
+          guidance_scale: 7.5
+        }
+      })
+    });
 
-  // Initial request to start generation
-  const response = await fetch(`${RUNPOD_BASE_URL}/${RUNPOD_ENDPOINT_ID}/run`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${RUNPOD_API_KEY}`
-    },
-    body: JSON.stringify({
-      input: {
-        prompt,
-        num_inference_steps: 50,
-        guidance_scale: 7.5,
-        negative_prompt: 'blurry, bad quality, distorted',
-        width: 512,
-        height: 512
-      }
-    })
-  });
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(`Generation request failed: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate image');
+    }
+
+    return {
+      success: true,
+      image: data.output[0]
+    };
+
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate image'
+    };
   }
-
-  const initialResponse = await response.json();
-  console.log('Initial response:', initialResponse);
-
-  // Poll for completion
-  return pollStatus(initialResponse.id);
 } 

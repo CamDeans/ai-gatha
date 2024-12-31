@@ -1,283 +1,207 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useTheme } from 'next-themes'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
-interface UserSettings {
-  theme: string;
-  imageSize: string;
-  defaultStyle: string;
-  notifications: boolean;
-  autoSave: boolean;
-  promptHistory: boolean;
-  imageQuality: string;
-  defaultScheduler: string;
-}
-
-const defaultSettings: UserSettings = {
-  theme: 'dark',
-  imageSize: '512x512',
-  defaultStyle: 'photorealistic',
-  notifications: true,
-  autoSave: true,
-  promptHistory: true,
-  imageQuality: 'high',
-  defaultScheduler: 'DPMSolverMultistep'
-}
+type ImageSize = '512x512' | '768x768' | '1024x1024'
+type ModelType = 'stable-diffusion' | 'dall-e' | 'midjourney'
 
 export default function SettingsPage() {
   const { data: session } = useSession()
-  const { theme, setTheme } = useTheme()
-  const [settings, setSettings] = useState<UserSettings>(defaultSettings)
-  const [isSaving, setIsSaving] = useState(false)
+  const [settings, setSettings] = useState<UserSettings>({
+    userId: '',
+    imageSize: '512x512',
+    defaultModel: 'stable-diffusion',
+    promptHistory: true,
+    runpodApiKey: '',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  })
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    async function loadSettings() {
-      try {
-        const response = await fetch('/api/settings')
-        if (!response.ok) {
-          throw new Error('Failed to load settings')
-        }
-        const data = await response.json()
-        if (data && Object.keys(data).length > 0) {
-          setSettings(prev => ({ ...prev, ...data }))
-          if (data.theme) {
-            setTheme(data.theme)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load settings:', error)
-        toast.error('Failed to load settings')
-      } finally {
-        setIsLoading(false)
+    if (session?.user) {
+      fetchSettings()
+    }
+  }, [session])
+
+  const fetchSettings = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/settings')
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings')
       }
+      const data = await response.json()
+      setSettings({
+        ...data,
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt)
+      })
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+      toast.error('Failed to load settings')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    if (session) {
-      loadSettings()
-    }
-  }, [session, setTheme])
-
-  const handleSettingChange = async (key: keyof UserSettings, value: any) => {
+  const saveSettings = async () => {
     try {
       setIsSaving(true)
-      const newSettings = { ...settings, [key]: value }
-      
-      // Update local state immediately for responsive UI
-      setSettings(newSettings)
-      if (key === 'theme') {
-        setTheme(value)
-      }
-
-      // Save to database
       const response = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSettings)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...settings,
+          updatedAt: new Date()
+        }),
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to save settings')
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to save settings')
       }
 
+      const data = await response.json()
+      setSettings(prev => ({
+        ...prev,
+        ...data.settings
+      }))
       toast.success('Settings saved successfully')
     } catch (error) {
-      console.error('Error saving settings:', error)
+      console.error('Failed to save settings:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to save settings')
-      
-      // Revert changes on error
-      setSettings(settings)
-      if (key === 'theme') {
-        setTheme(settings.theme)
-      }
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleThemeChange = async (value: string) => {
-    try {
-      setIsSaving(true)
-      const newSettings = { ...settings, theme: value }
-      
-      // Update theme immediately for better UX
-      setTheme(value)
-      setSettings(newSettings)
-
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSettings)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save theme setting')
-      }
-
-      toast.success('Theme updated successfully')
-    } catch (error) {
-      console.error('Error saving theme:', error)
-      toast.error('Failed to save theme')
-      
-      // Revert on error
-      setTheme(settings.theme)
-      setSettings(settings)
-    } finally {
-      setIsSaving(false)
-    }
+  const handleSettingChange = (key: keyof UserSettings, value: string | boolean) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value,
+      updatedAt: new Date()
+    }))
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
-        <div className="loading-spinner" />
-      </div>
-    )
+    return <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      Loading settings...
+    </div>
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        {isSaving && (
-          <span className="text-sm text-muted-foreground">Saving...</span>
-        )}
-      </div>
+    <div className="container max-w-2xl py-8">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your API keys and preferences
+          </p>
+        </div>
 
-      <div className="space-y-6">
-        {/* Appearance Section */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Appearance</h2>
-            <p className="text-sm text-muted-foreground">
-              Customize how Deansight AI looks on your device
-            </p>
-          </div>
-
-          <div className="bg-card rounded-lg border p-4 space-y-4">
+        <div className="space-y-6">
+          {/* API Keys */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">API Keys</h2>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Theme</label>
-              <select
-                value={settings.theme}
-                onChange={(e) => handleThemeChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-                <option value="system">System</option>
-              </select>
+              <Label htmlFor="runpodApiKey">RunPod API Key</Label>
+              <Input
+                id="runpodApiKey"
+                type="password"
+                value={settings.runpodApiKey}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleSettingChange('runpodApiKey', e.target.value)
+                }
+                placeholder="Enter your RunPod API key"
+              />
+              <p className="text-sm text-muted-foreground">
+                Required for image generation. Get your API key from RunPod dashboard.
+              </p>
             </div>
           </div>
-        </section>
 
-        {/* Image Generation Section */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Image Generation</h2>
-            <p className="text-sm text-muted-foreground">
-              Configure default settings for image generation
-            </p>
-          </div>
-
-          <div className="bg-card rounded-lg border p-4 space-y-4">
+          {/* Image Generation */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Image Generation</h2>
+            
             <div className="space-y-2">
-              <label className="text-sm font-medium">Default Image Size</label>
-              <select
+              <Label htmlFor="imageSize">Default Image Size</Label>
+              <Select
                 value={settings.imageSize}
-                onChange={(e) => handleSettingChange('imageSize', e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                onValueChange={(value: ImageSize) => 
+                  handleSettingChange('imageSize', value)
+                }
               >
-                <option value="256x256">Small (256x256)</option>
-                <option value="512x512">Medium (512x512)</option>
-                <option value="1024x1024">Large (1024x1024)</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select image size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="512x512">512x512</SelectItem>
+                  <SelectItem value="768x768">768x768</SelectItem>
+                  <SelectItem value="1024x1024">1024x1024</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Default Style</label>
-              <select
-                value={settings.defaultStyle}
-                onChange={(e) => handleSettingChange('defaultStyle', e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              <Label htmlFor="defaultModel">Default Model</Label>
+              <Select
+                value={settings.defaultModel}
+                onValueChange={(value: ModelType) => 
+                  handleSettingChange('defaultModel', value)
+                }
               >
-                <option value="photorealistic">Photorealistic</option>
-                <option value="artistic">Artistic</option>
-                <option value="cinematic">Cinematic</option>
-                <option value="minimalist">Minimalist</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select default model" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stable-diffusion">Stable Diffusion</SelectItem>
+                  <SelectItem value="dall-e">DALL-E</SelectItem>
+                  <SelectItem value="midjourney">Midjourney</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </section>
 
-        {/* Preferences Section */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Preferences</h2>
-            <p className="text-sm text-muted-foreground">
-              Customize your experience
-            </p>
-          </div>
-
-          <div className="bg-card rounded-lg border p-4 space-y-4">
+          {/* Preferences */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Preferences</h2>
+            
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Auto-save Images</p>
+              <div className="space-y-0.5">
+                <Label>Prompt History</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically save generated images to your gallery
+                  Save your prompt history for future reference
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.autoSave}
-                  onChange={(e) => handleSettingChange('autoSave', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Prompt History</p>
-                <p className="text-sm text-muted-foreground">
-                  Save your prompt history for future use
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.promptHistory}
-                  onChange={(e) => handleSettingChange('promptHistory', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Notifications</p>
-                <p className="text-sm text-muted-foreground">
-                  Receive updates and notifications
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.notifications}
-                  onChange={(e) => handleSettingChange('notifications', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
+              <Switch
+                checked={settings.promptHistory}
+                onCheckedChange={(checked: boolean) => 
+                  handleSettingChange('promptHistory', checked)
+                }
+              />
             </div>
           </div>
-        </section>
+        </div>
+
+        <Button
+          onClick={saveSettings}
+          disabled={isSaving}
+          className="bg-primary text-primary-foreground shadow hover:bg-primary/90"
+        >
+          {isSaving ? 'Saving...' : 'Save Settings'}
+        </Button>
       </div>
     </div>
   )

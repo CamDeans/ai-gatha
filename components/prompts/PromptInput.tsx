@@ -1,136 +1,70 @@
 'use client'
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { AISparkleIcon } from '../icons/AISparkleIcon';
-import { Button } from '../ui/button';
+import { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { WandIcon } from '@/components/icons/WandIcon';
+import PromptRefinementModal from './PromptRefinementModal';
 
 interface PromptInputProps {
-  onImageGenerated: (imageUrl: string | null) => void;
-  onPromptChange: (prompt: string) => void;
-  onRefinementClick: () => void;
-  onSuggestionsClick: () => void;
-  onAdvancedClick: () => void;
-  showAdvanced: boolean;
+  onSubmit: (prompt: string) => void;
+  isLoading?: boolean;
 }
 
-const PromptInput: React.FC<PromptInputProps> = ({ 
-  onImageGenerated, 
-  onPromptChange,
-  onRefinementClick,
-  onSuggestionsClick,
-  onAdvancedClick,
-  showAdvanced
-}) => {
-  const { data: session } = useSession();
-  const router = useRouter();
+export default function PromptInput({ onSubmit, isLoading = false }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isRefinementOpen, setIsRefinementOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newPrompt = e.target.value;
-    setPrompt(newPrompt);
-    onPromptChange(newPrompt);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (prompt.trim()) {
+      onSubmit(prompt.trim());
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!prompt.trim()) {
-      setError('Please enter a prompt');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate image');
-      }
-
-      const data = await response.json();
-      onImageGenerated(data.imageUrl);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to generate image');
-      onImageGenerated(null);
-    } finally {
-      setIsLoading(false);
+  const handleRefinementSelect = (refinedPrompt: string) => {
+    setPrompt(refinedPrompt);
+    // Focus and update the textarea
+    if (textareaRef.current) {
+      textareaRef.current.value = refinedPrompt;
+      textareaRef.current.focus();
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <textarea
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
           value={prompt}
-          onChange={handlePromptChange}
+          onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe the image you want to generate..."
-          className="w-full min-h-[100px] p-4 rounded-lg border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-          disabled={isLoading}
+          className="min-h-[100px] resize-none pr-12"
         />
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
         <Button
-          onClick={handleSubmit}
-          disabled={isLoading || !prompt.trim()}
-          className="flex-1"
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 top-2"
+          onClick={() => setIsRefinementOpen(true)}
         >
-          {isLoading ? (
-            <>
-              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <AISparkleIcon className="h-4 w-4 mr-2" />
-              Generate Image
-            </>
-          )}
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onSuggestionsClick}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          Get Ideas
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onRefinementClick}
-          disabled={!prompt.trim()}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          Refine
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onAdvancedClick}
-          className="group"
-        >
-          <AISparkleIcon className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-          {showAdvanced ? 'Hide' : 'Show'} Advanced
+          <WandIcon className="h-5 w-5" />
         </Button>
       </div>
-    </div>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isLoading || !prompt.trim()}>
+          {isLoading ? 'Generating...' : 'Generate'}
+        </Button>
+      </div>
+
+      <PromptRefinementModal
+        isOpen={isRefinementOpen}
+        onClose={() => setIsRefinementOpen(false)}
+        currentPrompt={prompt}
+        onSelectRefinement={handleRefinementSelect}
+      />
+    </form>
   );
-};
-
-export default PromptInput;
+}

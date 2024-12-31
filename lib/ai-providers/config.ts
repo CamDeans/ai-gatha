@@ -3,25 +3,25 @@
  * Manages different AI model providers and their settings
  */
 
-interface BaseProvider {
-  name: string;
+export interface BaseAIProvider {
   id: string;
-  apiKey: string | undefined;
+  name: string;
+  apiKey: string;
 }
 
-export interface ReplicateProvider extends BaseProvider {
-  name: 'Replicate';
-  id: 'replicate';
-  modelVersion: string;
-}
-
-interface RunPodProvider extends BaseProvider {
-  name: 'RunPod';
+export interface RunPodProvider extends BaseAIProvider {
   id: 'runpod';
+  name: 'RunPod';
   endpointUrl: string;
 }
 
-export type AIProvider = ReplicateProvider | RunPodProvider;
+export interface ReplicateProvider extends BaseAIProvider {
+  id: 'replicate';
+  name: 'Replicate';
+  modelVersion: string;
+}
+
+export type AIProvider = RunPodProvider | ReplicateProvider;
 
 export const AI_PROVIDERS = {
   RUNPOD: {

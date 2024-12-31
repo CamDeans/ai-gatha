@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { PromptEnhancer } from '@/lib/prompts/enhancer'
+import { PromptEngineer } from '@/lib/prompts/engineer'
 import type { EnhancementOptions } from '@/lib/prompts/enhancer'
 import { Button } from '../ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 
 interface AdvancedPromptControlsProps {
   basePrompt: string;
@@ -13,140 +15,124 @@ interface AdvancedPromptControlsProps {
 
 export default function AdvancedPromptControls({
   basePrompt,
-  onPromptUpdate
+  onPromptUpdate,
 }: AdvancedPromptControlsProps) {
-  const [options, setOptions] = useState<Partial<EnhancementOptions>>({})
+  const [options, setOptions] = useState<EnhancementOptions>({})
   const [selectedDetails, setSelectedDetails] = useState<string[]>([])
-  const [lastPrompt, setLastPrompt] = useState(basePrompt)
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    issues: string[];
+    suggestions: string[];
+  }>({ isValid: true, issues: [], suggestions: [] })
 
-  // Reset state when base prompt changes
+  // Validate prompt whenever it changes
   useEffect(() => {
-    if (basePrompt !== lastPrompt) {
-      setOptions({})
-      setSelectedDetails([])
-      setLastPrompt(basePrompt)
+    const result = PromptEngineer.validatePrompt(basePrompt)
+    setValidationResult(result)
+    
+    // Show validation feedback
+    if (result.issues.length > 0) {
+      toast.error(result.issues[0])
     }
-  }, [basePrompt, lastPrompt])
+    if (result.suggestions.length > 0) {
+      toast.info(result.suggestions[0])
+    }
+  }, [basePrompt])
 
-  // Update prompt when options change
-  useEffect(() => {
-    const enhancedPrompt = PromptEnhancer.enhancePrompt(basePrompt, {
-      ...options,
-      details: selectedDetails
-    })
-    onPromptUpdate(enhancedPrompt)
-  }, [options, selectedDetails, basePrompt, onPromptUpdate])
+  const handleStyleChange = (style: string) => {
+    setOptions(prev => ({ ...prev, style }))
+    updatePrompt({ ...options, style })
+  }
 
-  const handleOptionChange = (
-    category: keyof Omit<EnhancementOptions, 'details'>,
-    value: string | null
-  ) => {
-    setOptions(prev => ({
-      ...prev,
-      [category]: value
-    }))
+  const handleQualityChange = (quality: string) => {
+    setOptions(prev => ({ ...prev, quality }))
+    updatePrompt({ ...options, quality })
   }
 
   const handleDetailToggle = (detail: string) => {
-    setSelectedDetails(prev => {
-      const isSelected = prev.includes(detail)
-      if (isSelected) {
-        return prev.filter(d => d !== detail)
-      }
-      return [...prev, detail]
-    })
+    const newDetails = selectedDetails.includes(detail)
+      ? selectedDetails.filter(d => d !== detail)
+      : [...selectedDetails, detail]
+    
+    setSelectedDetails(newDetails)
+    updatePrompt({ ...options, details: newDetails })
   }
 
-  const getDisplayValue = (category: string, key: string | null) => {
-    if (!key) return ''
-    const map = {
-      styles: PromptEnhancer.styles,
-      qualities: PromptEnhancer.qualities,
-      lighting: PromptEnhancer.lighting,
-      perspectives: PromptEnhancer.perspectives,
-      moods: PromptEnhancer.moods
-    }
-    return map[category as keyof typeof map][key as keyof typeof map[keyof typeof map]] || key
+  const updatePrompt = (newOptions: EnhancementOptions) => {
+    const enhancedPrompt = PromptEnhancer.enhancePrompt(basePrompt, newOptions)
+    onPromptUpdate(enhancedPrompt)
   }
 
   return (
-    <div className="space-y-6 p-4 border rounded-lg bg-card">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Style Selection */}
+    <div className="space-y-6 p-4">
+      {/* Validation Feedback */}
+      {(validationResult.issues.length > 0 || validationResult.suggestions.length > 0) && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">Style</label>
-          <ScrollArea className="h-32 rounded-md border">
-            <div className="p-2 space-y-1">
-              {Object.entries(PromptEnhancer.styles).map(([key, value]) => (
-                <Button
-                  key={key}
-                  variant={options.style === key ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleOptionChange('style', options.style === key ? null : key)}
-                >
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </Button>
-              ))}
+          {validationResult.issues.map((issue, i) => (
+            <div key={i} className="text-sm text-destructive">
+              {issue}
             </div>
-          </ScrollArea>
+          ))}
+          {validationResult.suggestions.map((suggestion, i) => (
+            <div key={i} className="text-sm text-muted-foreground">
+              Tip: {suggestion}
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* Quality Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Quality</label>
-          <ScrollArea className="h-32 rounded-md border">
-            <div className="p-2 space-y-1">
-              {Object.entries(PromptEnhancer.qualities).map(([key, value]) => (
-                <Button
-                  key={key}
-                  variant={options.quality === key ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleOptionChange('quality', options.quality === key ? null : key)}
-                >
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
+      {/* Style Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Style</label>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(PromptEnhancer.styles).map(([key, value]) => (
+            <Button
+              key={key}
+              variant={options.style === key ? 'default' : 'outline'}
+              onClick={() => handleStyleChange(key)}
+              className="justify-start"
+            >
+              {key}
+            </Button>
+          ))}
         </div>
+      </div>
 
-        {/* Lighting Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Lighting</label>
-          <ScrollArea className="h-32 rounded-md border">
-            <div className="p-2 space-y-1">
-              {Object.entries(PromptEnhancer.lighting).map(([key, value]) => (
-                <Button
-                  key={key}
-                  variant={options.lighting === key ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleOptionChange('lighting', options.lighting === key ? null : key)}
-                >
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
+      {/* Quality Settings */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Quality</label>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(PromptEnhancer.qualities).map(([key, value]) => (
+            <Button
+              key={key}
+              variant={options.quality === key ? 'default' : 'outline'}
+              onClick={() => handleQualityChange(key)}
+              className="justify-start"
+            >
+              {key}
+            </Button>
+          ))}
         </div>
+      </div>
 
-        {/* Details Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Additional Details</label>
-          <ScrollArea className="h-32 rounded-md border">
-            <div className="p-2 space-y-1">
-              {PromptEnhancer.detailEnhancements.map((detail) => (
-                <Button
-                  key={detail}
-                  variant={selectedDetails.includes(detail) ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleDetailToggle(detail)}
-                >
-                  {detail}
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
+      {/* Detail Enhancements */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Additional Details</label>
+        <ScrollArea className="h-[200px] rounded-md border p-2">
+          <div className="grid grid-cols-2 gap-2">
+            {PromptEnhancer.details.map((detail: string) => (
+              <Button
+                key={detail}
+                variant={selectedDetails.includes(detail) ? 'default' : 'outline'}
+                onClick={() => handleDetailToggle(detail)}
+                className="justify-start"
+                size="sm"
+              >
+                {detail}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
 
       {/* Preview */}
@@ -162,5 +148,5 @@ export default function AdvancedPromptControls({
         </div>
       </div>
     </div>
-  );
+  )
 } 

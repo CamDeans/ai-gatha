@@ -1,24 +1,44 @@
 import { connectToDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { auth } from "@/auth";
 
 export async function GET() {
   try {
-    const client = await connectToDatabase();
-    const db = client.db();
-    
-    const settings = await db
-      .collection('settings')
-      .findOne({});
-
-    if (!settings) {
-      return NextResponse.json(
-        { error: 'Settings not found' },
-        { status: 404 }
-      );
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return NextResponse.json(settings);
+    const { db } = await connectToDatabase();
 
+    const settings = await db
+      .collection('user_settings')
+      .findOne({ userId: session.user.id });
+
+    // If no settings exist, return default settings
+    if (!settings) {
+      const defaultSettings: UserSettings = {
+        userId: session.user.id,
+        imageSize: '512x512',
+        defaultModel: 'stable-diffusion',
+        promptHistory: true,
+        runpodApiKey: '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Create default settings
+      await db.collection('user_settings').insertOne(defaultSettings);
+      return NextResponse.json(defaultSettings);
+    }
+
+    // Ensure runpodApiKey is included in the response
+    const sanitizedSettings = {
+      ...settings,
+      runpodApiKey: settings.runpodApiKey || '',
+    };
+
+    return NextResponse.json(sanitizedSettings);
   } catch (error) {
     console.error('Failed to fetch settings:', error);
     return NextResponse.json(
@@ -28,39 +48,47 @@ export async function GET() {
   }
 }
 
-export async function PUT(request: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { apiKey } = body;
-
-    if (!apiKey) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'API key is required' },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    const client = await connectToDatabase();
-    const db = client.db();
+    const settings = await request.json();
+    const { db } = await connectToDatabase();
     
-    const result = await db
-      .collection('settings')
-      .updateOne(
-        {},
-        { $set: { apiKey } },
-        { upsert: true }
-      );
+    // Validate settings before saving
+    const sanitizedSettings = {
+      userId: session.user.id,
+      imageSize: settings.imageSize || '512x512',
+      defaultModel: settings.defaultModel || 'stable-diffusion',
+      promptHistory: Boolean(settings.promptHistory),
+      runpodApiKey: settings.runpodApiKey || '',
+      updatedAt: new Date()
+    };
+    
+    const result = await db.collection('user_settings').updateOne(
+      { userId: session.user.id },
+      { 
+        $set: sanitizedSettings
+      },
+      { upsert: true }
+    );
 
     if (!result.acknowledged) {
-      throw new Error('Failed to update settings');
+      throw new Error('Failed to save settings');
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, settings: sanitizedSettings });
 
   } catch (error) {
-    console.error('Failed to update settings:', error);
+    console.error('Failed to save settings:', error);
     return NextResponse.json(
-      { error: 'Failed to update settings' },
+      { error: 'Failed to save settings' },
       { status: 500 }
     );
   }

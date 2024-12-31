@@ -4,71 +4,139 @@
  */
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
-import { runpodFetch } from '@/lib/runpod';
-import { rateLimit } from '@/lib/rate-limit';
-import clientPromise from '@/lib/mongodb';
-import type { MongoImage } from '@/types/mongodb';
+import { connectToDatabase } from '@/lib/db';
+import { generateWithRunPod } from '@/lib/ai-providers/runpod';
+import { RunPodProvider } from '@/lib/ai-providers/config';
 
-export async function POST(req: Request) {
+// Helper function to sanitize prompt
+function sanitizePrompt(prompt: string): string {
+  return prompt
+    // Remove zero-width spaces and other invisible characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Remove all non-ASCII characters
+    .replace(/[^\x00-\x7F]/g, '')
+    // Convert smart quotes to regular quotes
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    // Remove multiple spaces
+    .replace(/\s+/g, ' ')
+    // Remove special characters
+    .replace(/[^\w\s.,!?-]/g, '')
+    // Trim whitespace
+    .trim();
+}
+
+// Helper function to validate RunPod API key
+function isValidRunPodApiKey(apiKey: string): boolean {
+  const trimmedKey = apiKey.trim();
+  return trimmedKey.length > 0;
+}
+
+export async function POST(request: Request) {
   try {
-    // Check authentication
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limiting
-    const rateLimitResult = await rateLimit(session.user.id);
-    if (!rateLimitResult.success) {
-      return NextResponse.json({ error: rateLimitResult.message }, { status: 429 });
+    // Get user settings first
+    const { db } = await connectToDatabase();
+    const userSettings = await db
+      .collection('user_settings')
+      .findOne({ userId: session.user.id });
+
+    if (!userSettings?.runpodApiKey) {
+      return NextResponse.json(
+        { error: 'RunPod API key not configured. Please configure it in settings.' },
+        { status: 400 }
+      );
     }
 
-    // Validate request
-    const { prompt } = await req.json();
-    if (!prompt?.trim()) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    // Log API key details (masked)
+    const maskedKey = userSettings.runpodApiKey.replace(/./g, '*');
+    console.log('API Key from Settings:', {
+      length: userSettings.runpodApiKey.length,
+      format: maskedKey,
+      firstFour: userSettings.runpodApiKey.slice(0, 4),
+      lastFour: userSettings.runpodApiKey.slice(-4),
+    });
+
+    // Basic validation - just ensure it's not empty
+    if (!isValidRunPodApiKey(userSettings.runpodApiKey)) {
+      return NextResponse.json(
+        { error: 'RunPod API key cannot be empty' },
+        { status: 400 }
+      );
     }
 
-    // Generate image
-    const result = await runpodFetch(prompt);
+    const data = await request.json();
+    const { prompt } = data;
+
+    if (!prompt) {
+      return NextResponse.json(
+        { error: 'Prompt is required' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize the prompt
+    const sanitizedPrompt = sanitizePrompt(prompt);
     
-    if (!result?.output?.[0]?.image) {
-      throw new Error('No image data received from generation');
+    // Log the prompt transformation for debugging
+    console.log('Prompt transformation:', {
+      original: prompt,
+      sanitized: sanitizedPrompt,
+      byteLength: Buffer.from(sanitizedPrompt).length
+    });
+
+    if (!sanitizedPrompt) {
+      return NextResponse.json(
+        { error: 'Invalid prompt after sanitization' },
+        { status: 400 }
+      );
     }
 
-    // Save to database with proper structure
-    const client = await clientPromise;
-    const db = client.db('deansight');
-    
+    const config: RunPodProvider = {
+      id: 'runpod',
+      name: 'RunPod',
+      apiKey: userSettings.runpodApiKey,
+      endpointUrl: process.env.RUNPOD_ENDPOINT!,
+    };
+
+    const [width, height] = userSettings.imageSize.split('x').map(Number);
+    const imageData = await generateWithRunPod(sanitizedPrompt, config, {
+      width,
+      height,
+    });
+
+    // Save the generation to the images collection
     const imageDoc = {
       userId: session.user.id,
-      prompt,
-      imageUrl: result.output[0].image,
+      prompt: sanitizedPrompt,
+      originalPrompt: prompt,
+      imageUrl: imageData,
       createdAt: new Date(),
+      settings: {
+        width,
+        height,
+        model: userSettings.defaultModel
+      },
       metadata: {
-        model: 'stable-diffusion',
-        settings: {}
+        engine: 'runpod',
+        version: '1.0'
       }
-    } as const;
+    };
 
-    // Debug log before saving
-    console.log('Saving image:', {
-      userId: imageDoc.userId,
-      promptLength: imageDoc.prompt.length,
-      imageUrlLength: imageDoc.imageUrl.length,
+    const result = await db.collection('images').insertOne(imageDoc);
+    console.log('Saved image to database:', {
+      imageId: result.insertedId,
+      userId: session.user.id
     });
 
-    const saveResult = await db.collection('images').insertOne(imageDoc);
-
-    // Debug log after saving
-    console.log('Image saved:', {
-      id: saveResult.insertedId,
-      success: saveResult.acknowledged
-    });
-
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
-      image: result.output[0].image
+      imageId: result.insertedId,
+      imageUrl: imageData 
     });
 
   } catch (error) {

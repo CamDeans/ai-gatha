@@ -1,62 +1,54 @@
-# AI|Gatha Development Roadmap
+# AI-Gatha Development Roadmap
 
-## Current State (v0.1.0)
-✅ Completed:
-- Basic authentication system with NextAuth
-- MongoDB integration
-- Theme switching (dark/light mode)
-- Basic gallery structure
-- Settings page structure
-- Basic prompt engineering system
-- RunPod/Stable Diffusion integration
-- Image Generation Display
-  - Real-time image updates in dashboard
-  - Proper loading states
-  - Error handling for failed generations
-  - Image preview modal
+## Completed: v0.1.0 - Core Features
+- ✅ User authentication and session management
+- ✅ Image generation with prompt engineering
+- ✅ Image gallery with CRUD operations
+- ✅ Advanced prompt enhancement tools
+- ✅ Image actions (expand, download, share, delete)
+- ✅ Responsive UI with dark mode support
 
-🔄 In Progress:
-1. Prompt Engineering Refinement
-- [ ] Improve prompt templates and suggestions
-- [ ] Enhance prompt refinement logic
-- [ ] Add better prompt validation
-- [ ] Implement prompt history
+## Next Phase: v0.2.0 - Payment Integration & Plan Management
 
-2. Settings Page Completion
-- [ ] User preferences
-- [ ] API key management
-- [ ] Default generation settings
-- [ ] Theme configuration
+### Payment System
+- [ ] Integrate Stripe payment processing
+- [ ] Set up secure payment handling
+- [ ] Implement subscription management
+- [ ] Add usage tracking and billing
 
-3. Gallery Enhancements
-- [ ] Image organization
-- [ ] Filtering and sorting
-- [ ] Bulk operations
-- [ ] Sharing capabilities
+### Subscription Plans
+- [ ] Free Tier
+  - Limited image generations per month
+  - Basic prompt tools
+  - Standard resolution images
+  
+- [ ] Pro Plan
+  - Increased monthly image generations
+  - Advanced prompt engineering tools
+  - Higher resolution images
+  - Priority processing
+  
+- [ ] Enterprise Plan
+  - Unlimited image generations
+  - Custom prompt engineering tools
+  - Maximum resolution images
+  - API access
+  - Dedicated support
 
-## Timeline
-- Phase 1: Q1 2024
-- Phase 2: Q2 2024
-- Phase 3: Q3 2024
-- Phase 4: Q4 2024
-- Phase 5: Q1 2025
-- Phase 6: Q2 2025
+### Plan-Based Features
+- [ ] Implement usage limits based on plan
+- [ ] Add plan-specific image generation options
+- [ ] Create plan upgrade/downgrade flows
+- [ ] Add usage statistics and alerts
 
-## Priority Matrix
-### High Priority (Immediate)
-- Multiple AI model support
-- Advanced prompt engineering
-- Collections/folders
-- Image optimization
-- Caching system
+### Admin Features
+- [ ] Usage monitoring dashboard
+- [ ] Subscription management tools
+- [ ] User plan management
+- [ ] Revenue analytics
 
-### Medium Priority (Next Quarter)
-- Social features
-- Subscription system
-- Image editing tools
-- API development
-
-### Low Priority (Future)
-- Enterprise features
-- Advanced analytics
-- Custom branding
+### UI/UX Updates
+- [ ] Add pricing page
+- [ ] Implement subscription management UI
+- [ ] Add usage tracking displays
+- [ ] Update navigation for plan-specific features

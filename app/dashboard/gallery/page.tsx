@@ -1,188 +1,208 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useInView } from 'react-intersection-observer';
-import { useSession } from 'next-auth/react';
-import ImageDisplay from '@/components/ImageDisplay';
-import { LoadingSpinner } from '@/components/ui/loading';
-import { ErrorMessage } from '@/components/ui/error';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import Image from 'next/image';
+import { useState, useEffect } from 'react'
+import { ImageCard } from '@/components/ImageCard'
+import { ImageActions } from '@/components/ImageActions'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { LoadingSpinner } from '@/components/ui/loading'
+import Link from 'next/link'
 
-interface Image {
-  id: string;
-  userId: string;
-  prompt: string;
-  imageUrl: string;
-  createdAt: string;
+interface RawImage {
+  _id: string;
+  imageUrl?: string;
+  cleanedUrl?: string;
+  prompt?: string;
 }
 
-export default function Gallery() {
-  const [images, setImages] = useState<Image[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
-  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  
-  const { ref, inView } = useInView();
-  const { data: session } = useSession();
+interface ProcessedImage {
+  _id: string;
+  imageUrl: string;
+  prompt?: string;
+}
 
-  const fetchImages = useCallback(async (pageNum: number = 1) => {
-    if (!session?.user?.id) return;
-
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/gallery?page=${pageNum}&limit=12&userId=${session.user.id}`,
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch images');
-      }
-
-      const data = await response.json();
-      console.log('Fetched images:', data);
-
-      const imageArray = Array.isArray(data) ? data : data.images || [];
-      
-      if (pageNum === 1) {
-        setImages(imageArray);
-      } else {
-        setImages(prev => [...prev, ...imageArray]);
-      }
-      
-      setHasMore(imageArray.length === 12);
-    } catch (err) {
-      console.error('Error fetching images:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch images');
-      toast.error('Failed to load images');
-    } finally {
-      setLoading(false);
-    }
-  }, [session?.user?.id]);
+export default function GalleryPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [images, setImages] = useState<ProcessedImage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (session?.user?.id) {
-      fetchImages(1);
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin')
     }
-  }, [fetchImages, session?.user?.id]);
+  }, [status, router])
 
   useEffect(() => {
-    if (inView && hasMore && !loading && session?.user?.id) {
-      setPage(prev => {
-        const nextPage = prev + 1;
-        fetchImages(nextPage);
-        return nextPage;
-      });
-    }
-  }, [inView, hasMore, loading, fetchImages, session?.user?.id]);
+    async function fetchImages() {
+      try {
+        console.log('Fetching images for gallery...')
+        const response = await fetch('/api/gallery')
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch images: ${response.status}`)
+        }
+        
+        const rawData = await response.json()
+        console.log('Raw API response:', rawData)
 
-  const handleDelete = async (id: string) => {
+        // Validate the response data
+        if (!rawData) {
+          console.error('Empty response received')
+          throw new Error('Empty response received from server')
+        }
+
+        // Transform and validate each image
+        const validImages = (rawData as RawImage[])
+          .map(img => {
+            // Log the raw image data
+            console.log('Processing raw image:', {
+              id: img._id,
+              hasOriginalUrl: !!img.imageUrl,
+              hasCleanedUrl: !!img.cleanedUrl,
+              originalUrlPreview: img.imageUrl?.substring(0, 50),
+              cleanedUrlPreview: img.cleanedUrl?.substring(0, 50)
+            })
+
+            // Create processed image object
+            const processedImage: ProcessedImage = {
+              _id: img._id,
+              imageUrl: img.imageUrl || '', // Use the original imageUrl
+              prompt: img.prompt
+            }
+
+            // Log the processed image
+            console.log('Processed image:', {
+              id: processedImage._id,
+              hasUrl: !!processedImage.imageUrl,
+              urlPreview: processedImage.imageUrl ? `${processedImage.imageUrl.substring(0, 50)}...` : 'MISSING',
+              prompt: processedImage.prompt
+            })
+
+            return processedImage
+          })
+          .filter((img): img is ProcessedImage => {
+            const hasValidId = typeof img._id === 'string' && img._id.length > 0;
+            const hasValidUrl = typeof img.imageUrl === 'string' && img.imageUrl.trim().length > 0;
+            const isValid = hasValidId && hasValidUrl;
+            
+            if (!isValid) {
+              console.warn('Filtered out invalid image:', img);
+            }
+            return isValid;
+          })
+
+        console.log('Final valid images:', {
+          count: validImages.length,
+          images: validImages.map(img => ({
+            id: img._id,
+            hasUrl: !!img.imageUrl,
+            urlPreview: img.imageUrl ? `${img.imageUrl.substring(0, 50)}...` : 'MISSING'
+          }))
+        })
+
+        if (validImages.length === 0) {
+          console.warn('No valid images found in response')
+          setError('No valid images found')
+        } else {
+          setImages(validImages)
+        }
+      } catch (error) {
+        console.error('Error fetching images:', error)
+        setError(error instanceof Error ? error.message : 'Failed to fetch images')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (session?.user) {
+      fetchImages()
+    }
+  }, [session])
+
+  const handleDeleteImage = async (imageId: string) => {
     try {
-      const response = await fetch(`/api/images/${id}`, {
+      const response = await fetch(`/api/gallery/${imageId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete image');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to delete image');
       }
 
-      setImages(images.filter(img => img.id !== id));
+      // Only remove the image from state if the delete was successful
+      setImages(prevImages => prevImages.filter(img => img._id !== imageId));
       
+      // Return true to indicate success to the ImageActions component
+      return true;
     } catch (error) {
       console.error('Error deleting image:', error);
-      throw error;
+      throw error; // Let ImageActions handle the error display
     }
   };
 
-  if (loading && !images.length) {
+  if (status === 'loading' || loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex justify-center items-center min-h-screen">
         <LoadingSpinner />
       </div>
-    );
+    )
   }
 
-  if (error && !images.length) {
-    return (
-      <div className="p-4">
-        <ErrorMessage 
-          title="Failed to load gallery"
-          message={error} 
-          retry={() => fetchImages(1)}
-        />
-      </div>
-    );
+  if (!session) {
+    return <div className="text-center p-4">Please sign in to view your gallery</div>
   }
 
   return (
-    <>
-      <div className="container mx-auto px-4 py-8">
-        {(!images || images.length === 0) && !loading ? (
-          <div className="text-center">
-            <p className="text-muted-foreground">No images found</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Array.isArray(images) && images.map((image, index) => (
-              <ImageDisplay 
-                key={image.id}
-                {...image}
-                onDelete={handleDelete}
-                onClick={() => setSelectedImage(image)}
-                priority={index < 4}
-              />
-            ))}
-          </div>
-        )}
-        
-        <div ref={ref} className="h-10 flex items-center justify-center">
-          {loading && <LoadingSpinner />}
-          {!hasMore && images.length > 0 && (
-            <p className="text-sm text-muted-foreground">No more images to load</p>
-          )}
-        </div>
+    <div className="container mx-auto p-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Your Image Gallery</h1>
       </div>
 
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl">
-          {selectedImage && (
-            <div className="space-y-4">
-              <div className="relative aspect-square w-full">
-                {previewLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                    <LoadingSpinner />
+      {error ? (
+        <div className="text-center text-red-500 p-4">{error}</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {images.map((image) => {
+            // Log the image data being passed to ImageCard
+            console.log('Rendering ImageCard with:', {
+              id: image._id,
+              imageUrl: image.imageUrl,
+              hasUrl: !!image.imageUrl,
+              urlLength: image.imageUrl?.length,
+              urlPreview: image.imageUrl ? `${image.imageUrl.substring(0, 50)}...` : 'MISSING',
+              prompt: image.prompt?.substring(0, 50)
+            })
+            
+            return (
+              <div key={image._id} className="relative group h-full">
+                <div className="flex flex-col h-full">
+                  <ImageCard
+                    imageUrl={image.imageUrl}
+                    prompt={image.prompt}
+                  />
+                  <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <ImageActions
+                      imageUrl={image.imageUrl}
+                      prompt={image.prompt || ''}
+                      onDelete={() => handleDeleteImage(image._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    />
                   </div>
-                )}
-                <Image
-                  src={selectedImage.imageUrl}
-                  alt={selectedImage.prompt}
-                  fill
-                  className="object-contain"
-                  priority
-                  onLoadStart={() => setPreviewLoading(true)}
-                  onLoadingComplete={() => setPreviewLoading(false)}
-                  onError={() => {
-                    setPreviewLoading(false);
-                    toast.error('Failed to load image preview');
-                  }}
-                />
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="font-medium">Prompt</p>
-                <p className="text-sm text-muted-foreground">{selectedImage.prompt}</p>
-                <p className="text-xs text-muted-foreground">
-                  Created on {new Date(selectedImage.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+            )
+          })}
+        </div>
+      )}
+
+      {images.length === 0 && !error && (
+        <div className="text-center text-gray-500 p-4">
+          No images found. Generate some images to see them here!
+        </div>
+      )}
+    </div>
+  )
 } 

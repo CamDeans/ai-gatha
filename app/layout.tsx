@@ -5,8 +5,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from 'sonner'
 import './globals.css'
+import { auth } from "@/auth"
 
 // Initialize Inter font with Latin subset
 const inter = Inter({ subsets: ["latin"] })
@@ -16,15 +17,17 @@ export const metadata: Metadata = {
   description: 'AI Image Generation Platform',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await auth()
+  
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
+        <Providers session={session}>
           {children}
           <Toaster />
         </Providers>

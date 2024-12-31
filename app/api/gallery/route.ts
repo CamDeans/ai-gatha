@@ -1,67 +1,51 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
-import clientPromise from '@/lib/mongodb';
-import type { MongoImage } from '@/types/mongodb';
+import { getAllImages } from '@/lib/services/imageService';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(req: Request) {
+export async function GET() {
+  console.log('=== GALLERY API ROUTE START ===');
   try {
-    console.log('\n=== GALLERY API ROUTE START ===');
-    
     const session = await auth();
-    if (!session?.user?.id) {
-      console.log('❌ No session found');
+    if (!session?.user) {
+      console.log('No authenticated user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('👤 Session user:', {
-      userId: session.user.id,
-      email: session.user.email
-    });
-
-    const client = await clientPromise;
-    const db = client.db('deansight');
+    console.log('Fetching images for user:', session.user.email, 'with ID:', session.user.id);
+    const images = await getAllImages(session.user.id);
     
-    console.log('📁 Connected to database:', db.databaseName);
+    // Validate the images array before returning
+    if (!Array.isArray(images)) {
+      console.error('Invalid images data:', images);
+      return NextResponse.json(
+        { error: 'Invalid images data returned from database' },
+        { status: 500 }
+      );
+    }
 
-    // Query only for the current user's images
-    const images = await db.collection<MongoImage>('images')
-      .find({ userId: session.user.id })
-      .sort({ createdAt: -1 })
-      .toArray();
-
-    console.log('Found images:', {
-      total: images.length,
-      userId: session.user.id,
+    // Log the response we're about to send
+    console.log('Sending response:', {
+      count: images.length,
       sampleImage: images[0] ? {
         id: images[0]._id,
-        userId: images[0].userId,
-        hasImageUrl: !!images[0].imageUrl
+        hasUrl: !!images[0].imageUrl,
+        urlPreview: images[0].imageUrl?.substring(0, 50) + '...'
       } : null
     });
 
-    console.log('=== GALLERY API ROUTE END ===\n');
-
-    return NextResponse.json({
-      success: true,
-      images: images.map(img => ({
-        id: img._id.toString(),
-        userId: img.userId,
-        prompt: img.prompt,
-        imageUrl: img.imageUrl,
-        createdAt: img.createdAt.toISOString()
-      }))
-    });
-
+    // Return just the images array
+    return NextResponse.json(images);
   } catch (error) {
-    console.error('❌ Gallery error:', error);
+    console.error('Gallery API error:', {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
-      { 
-        error: 'Failed to fetch images', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
+      { error: 'Failed to fetch images' },
       { status: 500 }
     );
+  } finally {
+    console.log('=== GALLERY API ROUTE END ===');
   }
 } 
