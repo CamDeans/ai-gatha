@@ -4,13 +4,21 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 
 type ImageSize = '512x512' | '768x768' | '1024x1024'
 type ModelType = 'stable-diffusion' | 'dall-e' | 'midjourney'
+
+interface UserSettings {
+  userId: string;
+  imageSize: ImageSize;
+  defaultModel: ModelType;
+  promptHistory: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function SettingsPage() {
   const { data: session } = useSession()
@@ -19,7 +27,6 @@ export default function SettingsPage() {
     imageSize: '512x512',
     defaultModel: 'stable-diffusion',
     promptHistory: true,
-    runpodApiKey: '',
     createdAt: new Date(),
     updatedAt: new Date()
   })
@@ -106,31 +113,11 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
           <p className="text-muted-foreground">
-            Manage your API keys and preferences
+            Manage your preferences
           </p>
         </div>
 
         <div className="space-y-6">
-          {/* API Keys */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">API Keys</h2>
-            <div className="space-y-2">
-              <Label htmlFor="runpodApiKey">RunPod API Key</Label>
-              <Input
-                id="runpodApiKey"
-                type="password"
-                value={settings.runpodApiKey}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleSettingChange('runpodApiKey', e.target.value)
-                }
-                placeholder="Enter your RunPod API key"
-              />
-              <p className="text-sm text-muted-foreground">
-                Required for image generation. Get your API key from RunPod dashboard.
-              </p>
-            </div>
-          </div>
-
           {/* Image Generation */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Image Generation</h2>
