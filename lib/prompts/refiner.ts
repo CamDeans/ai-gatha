@@ -28,7 +28,8 @@ export class PromptRefiner {
     'professional photography, natural colors, clear focus',
     'modern portrait, natural pose, authentic expression',
     'professional headshot, clean background, studio quality',
-    'candid photography, natural environment, genuine moment'
+    'candid photography, natural environment, genuine moment',
+    'minimalist logo design, clean lines, professional branding'
   ];
 
   // Each detail variation focuses on different aspects
@@ -36,7 +37,8 @@ export class PromptRefiner {
     'clear details, natural skin texture, realistic features',
     'authentic appearance, natural materials, lifelike',
     'professional quality, well-composed, balanced lighting',
-    'high-end photography, clear focus, natural colors'
+    'high-end photography, clear focus, natural colors',
+    'vector style graphics, crisp edges, scalable design'
   ];
 
   // Each composition offers a distinct view
@@ -44,7 +46,8 @@ export class PromptRefiner {
     'balanced composition, natural perspective, clear view',
     'centered frame, professional composition, clean background',
     'detailed portrait, natural pose, authentic expression',
-    'environmental portrait, natural setting, genuine context'
+    'environmental portrait, natural setting, genuine context',
+    'centered logo layout, balanced spacing, professional design'
   ];
 
   // Each lighting setup creates a unique mood
@@ -52,7 +55,8 @@ export class PromptRefiner {
     'natural lighting, soft shadows, clear illumination',
     'golden hour lighting, warm natural glow, soft highlights',
     'studio lighting, even illumination, professional setup',
-    'ambient lighting, natural atmosphere, balanced exposure'
+    'ambient lighting, natural atmosphere, balanced exposure',
+    'flat lighting, clean presentation, professional display'
   ];
 
   // Each mood creates a distinct emotional response
@@ -60,17 +64,60 @@ export class PromptRefiner {
     'professional and polished, natural presence, authentic',
     'elegant and natural, genuine quality, authentic look',
     'bright and clear, natural energy, authentic feel',
-    'calm and natural, genuine atmosphere, authentic mood'
+    'calm and natural, genuine atmosphere, authentic mood',
+    'corporate and professional, minimalist style, modern brand'
   ];
+
+  private static detectLogoPrompt(prompt: string): boolean {
+    const logoKeywords = [
+      'logo', 'brand', 'icon', 'symbol', 'emblem',
+      'trademark', 'corporate', 'identity', 'branding'
+    ];
+    return logoKeywords.some(keyword => 
+      prompt.toLowerCase().includes(keyword)
+    );
+  }
 
   static refinePrompt(prompt: string): RefinementSuggestion[] {
     const suggestions: RefinementSuggestion[] = [];
+    const isLogo = this.detectLogoPrompt(prompt);
     
     // Add base quality to the prompt
     const basePrompt = `${prompt}, ${this.baseQualityModifiers.join(', ')}`;
 
-    // Create five distinct refinements, each with a unique combination
-    const refinements: RefinementOption[] = [
+    // Create refinements based on the type of prompt
+    const refinements: RefinementOption[] = isLogo ? [
+      {
+        type: 'style',
+        style: this.styleModifiers[4],
+        lighting: this.lightingModifiers[4],
+        suggestion: 'Minimalist logo version',
+      },
+      {
+        type: 'style',
+        style: this.styleModifiers[4],
+        detail: this.detailModifiers[4],
+        suggestion: 'Vector style logo version',
+      },
+      {
+        type: 'composition',
+        composition: this.compositionModifiers[4],
+        lighting: this.lightingModifiers[4],
+        suggestion: 'Professional logo layout',
+      },
+      {
+        type: 'mood',
+        mood: this.moodModifiers[4],
+        composition: this.compositionModifiers[4],
+        suggestion: 'Corporate brand version',
+      },
+      {
+        type: 'lighting',
+        lighting: this.lightingModifiers[4],
+        detail: this.detailModifiers[4],
+        suggestion: 'Clean professional version',
+      }
+    ] : [
       {
         type: 'style',
         style: this.styleModifiers[0],

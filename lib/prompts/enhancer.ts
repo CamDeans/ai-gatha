@@ -2,7 +2,7 @@ export interface EnhancementOptions {
   style?: string;
   quality?: string;
   details?: string[];
-  subject?: 'human' | 'landscape' | 'object' | 'other';
+  subject?: 'human' | 'landscape' | 'object' | 'logo' | 'other';
   lighting?: string;
   camera?: string;
   composition?: string;
@@ -17,35 +17,40 @@ export class PromptEnhancer {
     artistic: 'artistic photography, natural style, authentic look',
     portrait: 'professional portrait, natural pose, clear features',
     fashion: 'fashion photography, natural style, professional quality',
-    product: 'product photography, clear details, professional lighting'
+    product: 'product photography, clear details, professional lighting',
+    logo: 'minimalist logo design, clean lines, professional branding, vector style, corporate identity, scalable design'
   } as const;
 
   static readonly lighting = {
     studio: 'professional studio lighting, even illumination, clear shadows',
     natural: 'natural lighting, soft illumination, balanced exposure',
     dramatic: 'professional lighting, gentle contrast, clear illumination',
-    soft: 'soft lighting, gentle illumination, natural shadows'
+    soft: 'soft lighting, gentle illumination, natural shadows',
+    logo: 'flat lighting, clean shadows, professional presentation'
   } as const;
 
   static readonly cameras = {
     dslr: 'professional camera, clear focus, natural depth',
     medium: 'high quality camera, clear details, professional focus',
     cinema: 'cinema camera, professional quality, natural look',
-    portrait: 'portrait lens, natural blur, professional focus'
+    portrait: 'portrait lens, natural blur, professional focus',
+    logo: 'front view, clean capture, professional presentation'
   } as const;
 
   static readonly compositions = {
     balanced: 'balanced composition, natural framing, clear view',
     centered: 'centered composition, clean framing, clear view',
     dynamic: 'natural composition, clear angle, professional framing',
-    closeup: 'close-up composition, clear details, natural framing'
+    closeup: 'close-up composition, clear details, natural framing',
+    logo: 'centered logo composition, balanced spacing, professional layout'
   } as const;
 
   static readonly qualities = {
     standard: 'high quality, clear details, natural look',
     premium: 'professional quality, clear details, natural appearance',
     maximum: 'best quality, clear details, natural features',
-    balanced: 'balanced quality, clear focus, natural details'
+    balanced: 'balanced quality, clear focus, natural details',
+    logo: 'vector quality, crisp edges, professional finish'
   } as const;
 
   static readonly negativeBase = [
@@ -62,7 +67,10 @@ export class PromptEnhancer {
     'grainy',
     'pixelated',
     'watermark',
-    'text'
+    'text',
+    'complex background',
+    'busy design',
+    'messy layout'
   ].join(', ');
 
   static readonly details = [
@@ -75,7 +83,12 @@ export class PromptEnhancer {
     'natural lighting',
     'soft shadows',
     'balanced exposure',
-    'natural atmosphere'
+    'natural atmosphere',
+    'clean lines',
+    'minimalist design',
+    'professional branding',
+    'scalable graphics',
+    'vector style'
   ] as const;
 
   static readonly humanEnhancements = [
@@ -91,6 +104,19 @@ export class PromptEnhancer {
     'natural expression'
   ] as const;
 
+  static readonly logoEnhancements = [
+    'minimalist design',
+    'clean lines',
+    'professional branding',
+    'vector style graphics',
+    'scalable design',
+    'balanced composition',
+    'clear iconography',
+    'simple shapes',
+    'professional typography',
+    'corporate identity'
+  ] as const;
+
   private static detectHumanSubject(prompt: string): boolean {
     const humanKeywords = [
       'person', 'man', 'woman', 'boy', 'girl', 'people',
@@ -101,12 +127,27 @@ export class PromptEnhancer {
     );
   }
 
+  private static detectLogoSubject(prompt: string): boolean {
+    const logoKeywords = [
+      'logo', 'brand', 'icon', 'symbol', 'emblem',
+      'trademark', 'corporate', 'identity', 'branding'
+    ];
+    return logoKeywords.some(keyword => 
+      prompt.toLowerCase().includes(keyword)
+    );
+  }
+
   static enhancePrompt(basePrompt: string, options: EnhancementOptions): string {
     const enhancements: string[] = [];
     const isHumanSubject = this.detectHumanSubject(basePrompt);
+    const isLogoSubject = this.detectLogoSubject(basePrompt);
 
     if (isHumanSubject) {
       enhancements.push(...this.humanEnhancements);
+    }
+
+    if (isLogoSubject) {
+      enhancements.push(...this.logoEnhancements);
     }
 
     if (options.style && this.styles[options.style as keyof typeof this.styles]) {
@@ -117,7 +158,6 @@ export class PromptEnhancer {
       enhancements.push(this.qualities[options.quality as keyof typeof this.qualities]);
     }
 
-    // Add selected details
     if (options.details && options.details.length > 0) {
       const validDetails = options.details.filter(
         detail => this.details.includes(detail as typeof this.details[number])
@@ -125,12 +165,19 @@ export class PromptEnhancer {
       enhancements.push(...validDetails);
     }
 
-    // Add negative prompts for human subjects to prevent common issues
     if (isHumanSubject) {
       return `${basePrompt}, ${enhancements.join(', ')} 
         ### Negative prompt: unnatural features, distorted proportions, 
         blurred features, unrealistic face, asymmetrical features, 
         unnatural skin, artificial lighting, oversaturated colors`;
+    }
+
+    if (isLogoSubject) {
+      return `${basePrompt}, ${enhancements.join(', ')} 
+        ### Negative prompt: complex background, busy design, 
+        text heavy, cluttered layout, gradients, 
+        photorealistic elements, detailed illustrations, 
+        noisy textures, drop shadows`;
     }
 
     return enhancements.length > 0 
