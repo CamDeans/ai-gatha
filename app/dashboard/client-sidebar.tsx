@@ -13,10 +13,11 @@ export default function ClientSidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-16 left-4 z-50 sm:hidden"
+        className="fixed top-16 left-4 z-50 sm:hidden p-2 h-10 w-10 hover:bg-accent"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Toggle menu"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-6 w-6" />
       </Button>
       
       <div className={`
@@ -25,10 +26,15 @@ export default function ClientSidebar() {
         sm:relative sm:translate-x-0
         transition duration-200 ease-in-out
         bg-background border-r
-        w-64 pt-14
+        w-72 pt-20 pb-4
+        sm:w-64 sm:pt-14
         sm:block
+        overflow-y-auto
+        shadow-lg sm:shadow-none
       `}>
-        <Sidebar />
+        <div className="px-2 space-y-2">
+          <Sidebar />
+        </div>
       </div>
       
       {/* Overlay */}
