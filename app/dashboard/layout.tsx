@@ -4,7 +4,7 @@
  */
 import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
-import { auth } from "@/auth";
+import { auth } from '@/auth';
 import Header from '@/components/dashboard/Header';
 import Sidebar from '@/components/dashboard/Sidebar';
 
