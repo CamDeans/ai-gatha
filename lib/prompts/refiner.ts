@@ -17,52 +17,50 @@ interface RefinementOption {
 export class PromptRefiner {
   // Base quality modifiers that will be added to every prompt
   private static baseQualityModifiers = [
-    //'ultra realistic',
-    //'professional photography',
-    //'sharp focus',
-    '8k uhd',
-    'perfect anatomy',
-    //'hyperrealistic details'
+    'high quality',
+    'detailed',
+    'realistic',
+    'natural lighting'
   ];
 
   // Each style has a completely different approach
   private static styleModifiers = [
-    'cinematic film still, anamorphic lens, movie scene quality, dramatic composition',
-    'high fashion editorial, vogue magazine quality, professional model pose',
-    'professional portrait photography, studio lighting setup, commercial grade',
-    'artistic photography, creative composition, unique perspective'
+    'professional photography, natural colors, clear focus',
+    'modern portrait, natural pose, authentic expression',
+    'professional headshot, clean background, studio quality',
+    'candid photography, natural environment, genuine moment'
   ];
 
   // Each detail variation focuses on different aspects
   private static detailModifiers = [
-    'intricate fine details, ultra sharp focus, crystal clear resolution',
-    'photorealistic skin textures, natural materials, lifelike details',
-    'high-end production value, premium quality finish, flawless execution',
-    'masterpiece quality, award-winning photography, perfect clarity'
+    'clear details, natural skin texture, realistic features',
+    'authentic appearance, natural materials, lifelike',
+    'professional quality, well-composed, balanced lighting',
+    'high-end photography, clear focus, natural colors'
   ];
 
   // Each composition offers a distinct view
   private static compositionModifiers = [
-    'dynamic angle, dramatic perspective, cinematic framing',
-    'symmetrical composition, perfect balance, harmonious layout',
-    'close-up detail shot, macro photography, intimate perspective',
-    'wide establishing shot, environmental context, grand scale'
+    'balanced composition, natural perspective, clear view',
+    'centered frame, professional composition, clean background',
+    'detailed portrait, natural pose, authentic expression',
+    'environmental portrait, natural setting, genuine context'
   ];
 
   // Each lighting setup creates a unique mood
   private static lightingModifiers = [
-    'dramatic rim lighting, high contrast shadows, moody atmosphere',
-    'soft natural sunlight, golden hour glow, warm tones',
-    'professional studio lighting, perfect highlights, clean shadows',
-    'atmospheric volumetric lighting, cinematic rays, depth lighting'
+    'natural lighting, soft shadows, clear illumination',
+    'golden hour lighting, warm natural glow, soft highlights',
+    'studio lighting, even illumination, professional setup',
+    'ambient lighting, natural atmosphere, balanced exposure'
   ];
 
   // Each mood creates a distinct emotional response
   private static moodModifiers = [
-    'dramatic and intense, powerful emotional impact, striking presence',
-    'elegant and sophisticated, refined luxury, timeless beauty',
-    'bright and energetic, vibrant atmosphere, dynamic feeling',
-    'calm and serene, peaceful ambiance, tranquil mood'
+    'professional and polished, natural presence, authentic',
+    'elegant and natural, genuine quality, authentic look',
+    'bright and clear, natural energy, authentic feel',
+    'calm and natural, genuine atmosphere, authentic mood'
   ];
 
   static refinePrompt(prompt: string): RefinementSuggestion[] {
@@ -77,31 +75,31 @@ export class PromptRefiner {
         type: 'style',
         style: this.styleModifiers[0],
         lighting: this.lightingModifiers[0],
-        suggestion: 'Cinematic and dramatic version',
+        suggestion: 'Professional photography version',
       },
       {
         type: 'style',
         style: this.styleModifiers[1],
         detail: this.detailModifiers[1],
-        suggestion: 'High fashion editorial version',
+        suggestion: 'Modern portrait version',
       },
       {
         type: 'composition',
         composition: this.compositionModifiers[2],
         lighting: this.lightingModifiers[2],
-        suggestion: 'Detailed close-up version',
+        suggestion: 'Detailed portrait version',
       },
       {
         type: 'mood',
         mood: this.moodModifiers[3],
         composition: this.compositionModifiers[3],
-        suggestion: 'Serene wide-angle version',
+        suggestion: 'Natural environmental version',
       },
       {
         type: 'lighting',
         lighting: this.lightingModifiers[1],
         detail: this.detailModifiers[0],
-        suggestion: 'Natural light detailed version',
+        suggestion: 'Golden hour version',
       }
     ];
 

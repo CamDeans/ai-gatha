@@ -12,83 +12,83 @@ export interface EnhancementOptions {
 
 export class PromptEnhancer {
   static readonly styles = {
-    photorealistic: '(photorealistic:1.4), (hyperrealistic:1.3), RAW photo, 8k uhd',
-    cinematic: '(cinematic:1.3), movie quality, film grain, anamorphic',
-    artistic: '(artistic:1.2), creative, expressive, stylized',
-    portrait: '(professional portrait:1.4), studio quality, editorial photography',
-    fashion: '(fashion photography:1.3), high end, editorial, magazine quality',
-    product: '(commercial photography:1.3), advertising, professional product shot'
+    photorealistic: 'professional photography, natural colors, realistic details',
+    cinematic: 'professional cinematography, natural lighting, clear focus',
+    artistic: 'artistic photography, natural style, authentic look',
+    portrait: 'professional portrait, natural pose, clear features',
+    fashion: 'fashion photography, natural style, professional quality',
+    product: 'product photography, clear details, professional lighting'
   } as const;
 
   static readonly lighting = {
-    studio: '(professional studio lighting:1.2), perfect exposure, controlled lighting',
-    natural: '(natural lighting:1.2), golden hour, soft sunlight, ambient',
-    dramatic: '(dramatic lighting:1.3), high contrast, moody, cinematic lighting',
-    soft: '(soft lighting:1.2), diffused, flattering, beauty lighting'
+    studio: 'professional studio lighting, even illumination, clear shadows',
+    natural: 'natural lighting, soft illumination, balanced exposure',
+    dramatic: 'professional lighting, gentle contrast, clear illumination',
+    soft: 'soft lighting, gentle illumination, natural shadows'
   } as const;
 
   static readonly cameras = {
-    dslr: '(shot on DSLR:1.2), Canon EOS R5, 85mm lens, f/1.8',
-    medium: '(medium format:1.3), Hasselblad, sharp details, high resolution',
-    cinema: '(cinema camera:1.2), ARRI Alexa, cinematic look',
-    portrait: '(portrait lens:1.2), 135mm lens, bokeh, shallow depth of field'
+    dslr: 'professional camera, clear focus, natural depth',
+    medium: 'high quality camera, clear details, professional focus',
+    cinema: 'cinema camera, professional quality, natural look',
+    portrait: 'portrait lens, natural blur, professional focus'
   } as const;
 
   static readonly compositions = {
-    balanced: '(rule of thirds:1.1), balanced composition, professional framing',
-    centered: '(centered composition:1.1), symmetrical, front view',
-    dynamic: '(dynamic composition:1.2), interesting angle, creative framing',
-    closeup: '(macro composition:1.2), extreme detail, close-up shot'
+    balanced: 'balanced composition, natural framing, clear view',
+    centered: 'centered composition, clean framing, clear view',
+    dynamic: 'natural composition, clear angle, professional framing',
+    closeup: 'close-up composition, clear details, natural framing'
   } as const;
 
   static readonly qualities = {
-    standard: '(high quality:1.2), detailed, sharp',
-    premium: '(ultra high quality:1.4), (8k uhd:1.2), masterpiece',
-    maximum: '(best quality:1.4), (masterpiece:1.4), (ultra realistic:1.3)',
-    balanced: '(quality:1.2), (sharp focus:1.1), detailed'
+    standard: 'high quality, clear details, natural look',
+    premium: 'professional quality, clear details, natural appearance',
+    maximum: 'best quality, clear details, natural features',
+    balanced: 'balanced quality, clear focus, natural details'
   } as const;
 
   static readonly negativeBase = [
-    '(worst quality:1.4)',
-    '(low quality:1.4)',
-    '(normal quality:1.1)',
-    'lowres',
-    'bad anatomy',
-    'bad composition',
-    'poor lighting',
-    'jpeg artifacts',
-    'watermark',
-    'signature',
     'blurry',
-    'amateur',
+    'distorted',
+    'deformed',
+    'unnatural',
+    'artificial',
+    'low quality',
+    'oversaturated',
+    'overexposed',
+    'underexposed',
     'noisy',
-    'grainy'
+    'grainy',
+    'pixelated',
+    'watermark',
+    'text'
   ].join(', ');
 
   static readonly details = [
-    'vibrant colors',
-    'sharp focus',
-    'depth of field',
-    'dynamic lighting',
-    'rich textures',
-    'fine details',
-    'volumetric lighting',
-    'ambient occlusion',
-    'ray tracing',
-    'global illumination'
+    'natural colors',
+    'clear focus',
+    'balanced lighting',
+    'natural shadows',
+    'realistic textures',
+    'clear details',
+    'natural lighting',
+    'soft shadows',
+    'balanced exposure',
+    'natural atmosphere'
   ] as const;
 
   static readonly humanEnhancements = [
-    'perfect anatomy',
-    'realistic facial features',
-    'detailed skin texture',
-    'accurate body proportions',
-    'five fingers on each hand',
-    'symmetrical facial features',
-    'clear facial details',
+    'natural facial features',
+    'realistic facial proportions',
+    'natural skin texture',
+    'natural body proportions',
+    'clear facial features',
+    'natural facial structure',
+    'balanced facial features',
     'natural skin tones',
-    'proper eye alignment',
-    'detailed facial structure'
+    'clear eyes',
+    'natural expression'
   ] as const;
 
   private static detectHumanSubject(prompt: string): boolean {
@@ -128,9 +128,9 @@ export class PromptEnhancer {
     // Add negative prompts for human subjects to prevent common issues
     if (isHumanSubject) {
       return `${basePrompt}, ${enhancements.join(', ')} 
-        ### Negative prompt: deformed hands, extra fingers, missing fingers, 
-        blurred features, distorted face, asymmetrical eyes, deformed body, 
-        unrealistic proportions, missing facial features, blurred face`;
+        ### Negative prompt: unnatural features, distorted proportions, 
+        blurred features, unrealistic face, asymmetrical features, 
+        unnatural skin, artificial lighting, oversaturated colors`;
     }
 
     return enhancements.length > 0 
