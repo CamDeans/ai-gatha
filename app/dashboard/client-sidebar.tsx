@@ -36,9 +36,10 @@ export default function ClientSidebar() {
             min-h-[100dvh] sm:min-h-[calc(100vh-3.5rem)]
             flex flex-col
             touch-pan-y
+            shadow-lg sm:shadow-none
           `}
         >
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-4 bg-background text-foreground">
             <Sidebar />
           </div>
         </div>

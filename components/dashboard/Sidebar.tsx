@@ -50,8 +50,9 @@ export default function Sidebar() {
                 min-h-[3.5rem] px-3 py-2
                 rounded-lg transition-colors
                 active:scale-[0.98]
+                text-foreground
                 ${isActive 
-                  ? 'bg-primary text-primary-foreground' 
+                  ? 'bg-primary text-primary-foreground font-bold' 
                   : 'hover:bg-accent hover:text-accent-foreground'
                 }
               `}
