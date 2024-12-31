@@ -134,12 +134,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Image Generation</h1>
       </div>
 
-      <Card className="p-6 w-full">
+      <Card className="p-4 sm:p-6 w-full">
         <div className="space-y-4">
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium mb-2">
@@ -151,6 +151,7 @@ export default function DashboardPage() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe the image you want to generate..."
               disabled={loading}
+              className="w-full"
             />
           </div>
 
@@ -158,50 +159,57 @@ export default function DashboardPage() {
             <Button
               onClick={handleGenerateImage}
               disabled={loading || !prompt.trim()}
+              className="w-full sm:w-auto"
             >
               {loading ? <LoadingSpinner /> : 'Generate Image'}
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleRefinePrompt}
-              disabled={loading || !prompt.trim()}
-            >
-              Refine Prompt
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleGetIdeas}
-              disabled={loading}
-            >
-              Get Ideas
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleEnhancePrompt}
-              disabled={loading || !prompt.trim()}
-            >
-              Enhance Prompt
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              disabled={loading}
-            >
-              {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
-            </Button>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleRefinePrompt}
+                disabled={loading || !prompt.trim()}
+                className="flex-1 sm:flex-none"
+              >
+                Refine Prompt
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleGetIdeas}
+                disabled={loading}
+                className="flex-1 sm:flex-none"
+              >
+                Get Ideas
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleEnhancePrompt}
+                disabled={loading || !prompt.trim()}
+                className="flex-1 sm:flex-none"
+              >
+                Enhance Prompt
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                disabled={loading}
+                className="flex-1 sm:flex-none"
+              >
+                {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+              </Button>
+            </div>
           </div>
 
           {showAdvanced && (
-            <div className="space-y-6 mt-4 p-6 bg-gray-50 rounded-lg dark:bg-gray-800">
+            <div className="space-y-6 mt-4 p-4 sm:p-6 bg-gray-50 rounded-lg dark:bg-gray-800">
               <div>
                 <h3 className="font-medium mb-4">Style Options</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {Object.entries(PromptEngineer.styles).map(([style, description]) => (
                     <Button
                       key={style}
                       variant="outline"
                       onClick={() => setPrompt(prev => `${prev}, ${description}`)}
-                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base"
                     >
                       Add {style} style
                     </Button>
@@ -211,7 +219,7 @@ export default function DashboardPage() {
 
               <div>
                 <h3 className="font-medium mb-4">Quality Enhancements</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {Object.entries(PromptEnhancer.qualities).map(([quality, description]) => (
                     <Button
                       key={quality}
@@ -222,7 +230,7 @@ export default function DashboardPage() {
                         });
                         setPrompt(enhancedPrompt);
                       }}
-                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base"
                     >
                       {quality.charAt(0).toUpperCase() + quality.slice(1)} Quality
                     </Button>
@@ -232,7 +240,7 @@ export default function DashboardPage() {
 
               <div>
                 <h3 className="font-medium mb-4">Lighting & Composition</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {Object.entries(PromptEnhancer.lighting).map(([light, description]) => (
                     <Button
                       key={light}
@@ -243,7 +251,7 @@ export default function DashboardPage() {
                         });
                         setPrompt(enhancedPrompt);
                       }}
-                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base"
                     >
                       {light.charAt(0).toUpperCase() + light.slice(1)} Lighting
                     </Button>
@@ -253,7 +261,7 @@ export default function DashboardPage() {
 
               <div>
                 <h3 className="font-medium mb-4">Detail Enhancements</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {PromptEnhancer.details.map((detail) => (
                     <Button
                       key={detail}
@@ -264,7 +272,7 @@ export default function DashboardPage() {
                         });
                         setPrompt(enhancedPrompt);
                       }}
-                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="justify-start hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base"
                     >
                       Add {detail}
                     </Button>
