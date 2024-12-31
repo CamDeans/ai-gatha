@@ -34,28 +34,31 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 h-full border-r border-border bg-card">
-      <nav className="sticky top-0 p-4 space-y-2">
-        {links.map((link) => {
-          const Icon = link.icon
-          const isActive = pathname === link.href
-          
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                isActive 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'hover:bg-accent hover:text-accent-foreground'
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="font-medium">{link.label}</span>
-            </Link>
-          )
-        })}
-      </nav>
-    </aside>
+    <nav className="w-full space-y-1">
+      {links.map((link) => {
+        const Icon = link.icon
+        const isActive = pathname === link.href
+        
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`
+              flex items-center gap-3 
+              min-h-[48px] px-4 py-3
+              rounded-md transition-colors
+              touch-manipulation
+              ${isActive 
+                ? 'bg-primary text-primary-foreground' 
+                : 'hover:bg-accent hover:text-accent-foreground'
+              }
+            `}
+          >
+            <Icon className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium truncate">{link.label}</span>
+          </Link>
+        )
+      })}
+    </nav>
   )
 } 

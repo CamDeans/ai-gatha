@@ -26,13 +26,13 @@ export default function ClientSidebar() {
         sm:relative sm:translate-x-0
         transition duration-200 ease-in-out
         bg-background border-r
-        w-72 pt-14 pb-4
-        sm:w-64
-        sm:block
-        overflow-y-auto
+        w-72 sm:w-64
+        h-[100dvh] sm:h-[calc(100vh-3.5rem)]
+        flex flex-col
+        overflow-hidden
         shadow-lg sm:shadow-none
       `}>
-        <div className="px-2 space-y-2">
+        <div className="flex-1 overflow-y-auto px-2 py-4">
           <Sidebar />
         </div>
       </div>
