@@ -1,11 +1,19 @@
 import NextAuth from 'next-auth';
-import { getServerSession } from 'next-auth';
-import { authConfig } from './auth.config';
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from "@/lib/mongodb";
+import { authConfig } from '@/auth.config';
 
-export const { signIn, signOut } = NextAuth(authConfig);
+export const authOptions = {
+  ...authConfig,
+  adapter: MongoDBAdapter(clientPromise, {
+    databaseName: 'aigatha',
+    collections: {
+      Users: 'users',
+      Accounts: 'accounts',
+      Sessions: 'sessions',
+      VerificationTokens: 'verification_tokens',
+    },
+  }),
+};
 
-// This is a server-side function
-export async function auth() {
-  const session = await getServerSession(authConfig);
-  return session;
-} 
+export const { auth, signIn, signOut } = NextAuth(authOptions); 

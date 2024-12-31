@@ -1,22 +1,8 @@
-import NextAuth from 'next-auth';
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "@/lib/mongodb";
-import { authConfig } from '@/auth.config';
+export const dynamic = 'force-dynamic'
 
-const handler = NextAuth({
-  ...authConfig,
-  adapter: MongoDBAdapter(clientPromise, {
-    databaseName: 'aigatha',
-    collections: {
-      Users: 'users',
-      Accounts: 'accounts',
-      Sessions: 'sessions',
-      VerificationTokens: 'verification_tokens',
-    },
-  }),
-});
+import { authOptions } from "@/auth"
+import NextAuth from "next-auth"
 
-export { handler as GET, handler as POST };
+const handler = NextAuth(authOptions)
 
-// Force Node.js runtime
-export const runtime = 'nodejs';
+export { handler as GET, handler as POST }

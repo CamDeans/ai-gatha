@@ -1,27 +1,25 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db';
+import { auth } from "@/auth";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const email = request.headers.get('x-user-email');
-    if (!email) {
-      return NextResponse.json({ error: 'No email provided' }, { status: 400 });
-    }
-
-    const { db } = await connectToDatabase();
-    const user = await db.collection('users').findOne({ email });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const session = await auth();
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
     return NextResponse.json({
-      id: user._id.toString(),
-      email: user.email,
-      userId: user.userId || user.email,
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image
+      }
     });
   } catch (error) {
     console.error('Error fetching user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return new NextResponse('Error fetching user', { status: 500 });
   }
 } 
