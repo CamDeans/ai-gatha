@@ -1,47 +1,37 @@
-import { connectToDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { auth } from "@/auth";
+import { connectToDatabase } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 
-export async function DELETE(request: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const session = await auth();
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
+    const id = params.id;
     if (!id) {
-      return NextResponse.json(
-        { error: 'Image ID is required' },
-        { status: 400 }
-      );
+      return new NextResponse('Image ID is required', { status: 400 });
     }
 
-    if (!ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: 'Invalid image ID format' },
-        { status: 400 }
-      );
-    }
-
-    const client = await connectToDatabase();
-    const db = client.db();
+    const { db } = await connectToDatabase();
     
     const result = await db.collection('images').deleteOne({
-      _id: new ObjectId(id)
+      _id: new ObjectId(id),
+      userId: session.user.id // Ensure user owns the image
     });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { error: 'Image not found' },
-        { status: 404 }
-      );
+      return new NextResponse('Image not found or unauthorized', { status: 404 });
     }
 
-    return NextResponse.json({ success: true });
-
+    return new NextResponse('Image deleted successfully', { status: 200 });
   } catch (error) {
-    console.error('Failed to delete image:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete image' },
-      { status: 500 }
-    );
+    console.error('Error deleting image:', error);
+    return new NextResponse('Error deleting image', { status: 500 });
   }
 } 
