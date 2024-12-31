@@ -26,12 +26,6 @@ function sanitizePrompt(prompt: string): string {
     .trim();
 }
 
-// Helper function to validate RunPod API key
-function isValidRunPodApiKey(apiKey: string): boolean {
-  const trimmedKey = apiKey.trim();
-  return trimmedKey.length > 0;
-}
-
 export async function POST(request: Request) {
   try {
     const session = await auth();
@@ -39,35 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user settings first
+    // Get user settings for image size
     const { db } = await connectToDatabase();
     const userSettings = await db
       .collection('user_settings')
       .findOne({ userId: session.user.id });
-
-    if (!userSettings?.runpodApiKey) {
-      return NextResponse.json(
-        { error: 'RunPod API key not configured. Please configure it in settings.' },
-        { status: 400 }
-      );
-    }
-
-    // Log API key details (masked)
-    const maskedKey = userSettings.runpodApiKey.replace(/./g, '*');
-    console.log('API Key from Settings:', {
-      length: userSettings.runpodApiKey.length,
-      format: maskedKey,
-      firstFour: userSettings.runpodApiKey.slice(0, 4),
-      lastFour: userSettings.runpodApiKey.slice(-4),
-    });
-
-    // Basic validation - just ensure it's not empty
-    if (!isValidRunPodApiKey(userSettings.runpodApiKey)) {
-      return NextResponse.json(
-        { error: 'RunPod API key cannot be empty' },
-        { status: 400 }
-      );
-    }
 
     const data = await request.json();
     const { prompt } = data;
@@ -99,11 +69,12 @@ export async function POST(request: Request) {
     const config: RunPodProvider = {
       id: 'runpod',
       name: 'RunPod',
-      apiKey: userSettings.runpodApiKey,
+      apiKey: process.env.RUNPOD_API_KEY!,
       endpointUrl: process.env.RUNPOD_ENDPOINT!,
     };
 
-    const [width, height] = userSettings.imageSize.split('x').map(Number);
+    // Use default size if user settings don't exist
+    const [width, height] = (userSettings?.imageSize || '512x512').split('x').map(Number);
     const imageData = await generateWithRunPod(sanitizedPrompt, config, {
       width,
       height,
@@ -119,7 +90,7 @@ export async function POST(request: Request) {
       settings: {
         width,
         height,
-        model: userSettings.defaultModel
+        model: userSettings?.defaultModel || 'stable-diffusion-v1'
       },
       metadata: {
         engine: 'runpod',

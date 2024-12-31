@@ -23,7 +23,6 @@ export async function POST() {
     // Initialize default user settings
     const defaultSettings = {
       userId: session.user.id,
-      runpodApiKey: process.env.RUNPOD_API_KEY,
       imageSize: '512x512',
       defaultModel: 'stable-diffusion-v1',
       createdAt: new Date(),
