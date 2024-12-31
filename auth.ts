@@ -1,9 +1,14 @@
-import NextAuth from 'next-auth';
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "@/lib/mongodb";
-import { authConfig } from '@/auth.config';
 
-export const authOptions = {
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
   ...authConfig,
   adapter: MongoDBAdapter(clientPromise, {
     databaseName: 'aigatha',
@@ -14,6 +19,6 @@ export const authOptions = {
       VerificationTokens: 'verification_tokens',
     },
   }),
-};
-
-export const { auth, signIn, signOut } = NextAuth(authOptions); 
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+}); 
