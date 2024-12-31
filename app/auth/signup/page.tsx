@@ -1,11 +1,11 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { SignUpForm } from "@/components/auth/SignUpForm"
+import { SignUpButtons } from "@/components/auth/SignUpButtons"
 
 export const metadata: Metadata = {
-  title: 'Sign Up - AI|Gatha',
-  description: 'Create your AI|Gatha account',
+  title: 'Sign Up - AI-Gatha',
+  description: 'Create your AI-Gatha account',
 }
 
 export default function SignUpPage() {
@@ -40,23 +40,25 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          <SignUpForm />
+          <div className="space-y-6">
+            <SignUpButtons />
 
-          <div className="text-center text-xs text-muted-foreground">
-            By creating an account, you agree to our{" "}
-            <Link 
-              href="/terms" 
-              className="underline underline-offset-4 hover:text-primary"
-            >
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link 
-              href="/privacy" 
-              className="underline underline-offset-4 hover:text-primary"
-            >
-              Privacy Policy
-            </Link>
+            <div className="text-center text-xs text-muted-foreground">
+              By creating an account, you agree to our{" "}
+              <Link 
+                href="/terms" 
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link 
+                href="/privacy" 
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Privacy Policy
+              </Link>
+            </div>
           </div>
         </div>
       </div>
