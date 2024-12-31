@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth.config';
+import { config } from '@/auth';
 import { getAllImages } from '@/lib/services/imageService';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authConfig);
+    const session = await getServerSession(config);
     const userId = session?.user?.id;
 
     if (!userId) {

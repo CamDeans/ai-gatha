@@ -11,36 +11,34 @@ declare module "next-auth" {
   }
 }
 
-const providers = [
-  Google({
-    clientId: process.env.GOOGLE_CLIENT_ID!,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  }),
-  GitHub({
-    clientId: process.env.GITHUB_CLIENT_ID!,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-  }),
-] as const;
-
-export const authConfig = {
-  providers,
+export const authConfig: AuthOptions = {
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+  ],
   pages: {
     signIn: '/auth/signin',
     signOut: '/auth/signout',
     error: '/auth/error',
   },
   callbacks: {
-    jwt({ token, user }: { token: JWT; user?: { id: string } }) {
+    jwt({ token, user }) {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    session({ session, token }: { session: DefaultSession; token: JWT & { id: string } }) {
+    session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
       }
       return session;
     },
   },
-} as const;
+};
