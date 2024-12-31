@@ -16,6 +16,20 @@ export function SignUpButtons() {
   const router = useRouter()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
 
+  const initializeUserSettings = async () => {
+    try {
+      const response = await fetch('/api/user/initialize', {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to initialize user settings');
+      }
+    } catch (error) {
+      console.error('Error initializing user settings:', error);
+      toast.error('Failed to initialize user settings');
+    }
+  };
+
   const handleSignUp = async (provider: 'google' | 'github') => {
     try {
       setIsLoading(prev => ({ ...prev, [provider]: true }))
@@ -29,6 +43,8 @@ export function SignUpButtons() {
       }
 
       if (result?.url) {
+        // Initialize user settings after successful sign-in
+        await initializeUserSettings();
         router.push(result.url)
       }
     } catch (error) {
