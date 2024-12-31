@@ -9,13 +9,13 @@ export default function ClientSidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed sm:relative z-50">
+    <>
       {/* Toggle button - hidden when sidebar is open */}
       {!isOpen && (
         <Button
           variant="ghost"
           size="icon"
-          className="fixed bottom-4 left-4 z-50 sm:hidden p-2 h-12 w-12 hover:bg-accent rounded-full shadow-md bg-background"
+          className="fixed bottom-4 left-4 z-[60] sm:hidden p-2 h-12 w-12 hover:bg-accent rounded-full shadow-md bg-background"
           onClick={() => setIsOpen(true)}
           aria-label="Toggle menu"
         >
@@ -23,30 +23,34 @@ export default function ClientSidebar() {
         </Button>
       )}
       
-      <div className={`
-        fixed inset-y-0 left-0 transform 
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        sm:relative sm:translate-x-0
-        transition duration-200 ease-in-out
-        bg-background border-r
-        w-72 sm:w-64
-        h-[100dvh] sm:h-[calc(100vh-3.5rem)]
-        flex flex-col
-        overflow-hidden
-        shadow-lg sm:shadow-none
-      `}>
-        <div className="flex-1 overflow-y-auto px-2 py-4">
-          <Sidebar />
-        </div>
-      </div>
-      
-      {/* Overlay */}
-      {isOpen && (
+      {/* Sidebar container */}
+      <div className="fixed inset-y-0 left-0 sm:relative z-[51]">
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-    </div>
+          className={`
+            fixed inset-y-0 left-0 
+            transform transition-transform duration-200 ease-in-out
+            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            sm:relative sm:translate-x-0
+            bg-background border-r
+            w-72 sm:w-64
+            min-h-[100dvh] sm:min-h-[calc(100vh-3.5rem)]
+            flex flex-col
+            touch-pan-y
+          `}
+        >
+          <div className="flex-1 p-4">
+            <Sidebar />
+          </div>
+        </div>
+        
+        {/* Overlay */}
+        {isOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[50] sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </div>
+    </>
   );
 } 
