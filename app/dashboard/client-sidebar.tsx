@@ -10,15 +10,18 @@ export default function ClientSidebar() {
 
   return (
     <div className="fixed sm:relative z-50">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed bottom-4 left-4 z-50 sm:hidden p-2 h-12 w-12 hover:bg-accent rounded-full shadow-md bg-background"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle menu"
-      >
-        <Menu className="h-6 w-6" />
-      </Button>
+      {/* Toggle button - hidden when sidebar is open */}
+      {!isOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed bottom-4 left-4 z-50 sm:hidden p-2 h-12 w-12 hover:bg-accent rounded-full shadow-md bg-background"
+          onClick={() => setIsOpen(true)}
+          aria-label="Toggle menu"
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+      )}
       
       <div className={`
         fixed inset-y-0 left-0 transform 
