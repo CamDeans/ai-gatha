@@ -177,8 +177,7 @@ export function ImageActions({
 
   return (
     <>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="flex gap-2">
         <ActionButton
           icon={Expand}
           onClick={() => setIsExpanded(true)}

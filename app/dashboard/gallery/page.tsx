@@ -183,7 +183,7 @@ export default function GalleryPage() {
                     imageUrl={image.imageUrl}
                     prompt={image.prompt}
                   />
-                  <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="mt-2 px-4 pb-4 flex justify-end gap-2">
                     <ImageActions
                       imageUrl={image.imageUrl}
                       prompt={image.prompt || ''}

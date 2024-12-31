@@ -117,7 +117,7 @@ export function ImageCard({ imageUrl, prompt, onDelete }: ImageCardProps) {
         )}
       </div>
       {prompt && (
-        <div className="px-6 py-4 border-t border-border">
+        <div className="px-4 py-3 border-t border-border">
           <p className="text-sm text-gray-500 dark:text-gray-400">{prompt}</p>
         </div>
       )}
