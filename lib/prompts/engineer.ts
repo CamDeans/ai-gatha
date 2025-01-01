@@ -9,25 +9,25 @@ interface PromptSuggestion {
 
 export class PromptEngineer {
   static readonly styles = {
-    photorealistic: 'photorealistic, highly detailed',
-    artistic: 'artistic, creative, expressive',
-    cinematic: 'cinematic, dramatic lighting, movie still',
-    anime: 'anime style, manga art',
-    digital: 'digital art, concept art',
-    vintage: 'vintage, retro style, aged'
+    photorealistic: 'professional photography, natural colors, clear focus',
+    artistic: 'candid photography, natural environment, genuine moment',
+    cinematic: 'professional headshot, clean background, studio quality',
+    anime: 'modern portrait, natural pose, authentic expression',
+    digital: 'professional quality, well-composed, balanced lighting',
+    vintage: 'high-end photography, clear focus, natural colors'
   } as const;
 
   static readonly details = [
-    'vibrant colors',
-    'sharp focus',
-    'depth of field',
-    'dynamic lighting',
-    'rich textures',
-    'fine details',
-    'volumetric lighting',
-    'ambient occlusion',
-    'ray tracing',
-    'global illumination'
+    'natural colors',
+    'clear focus',
+    'balanced lighting',
+    'natural shadows',
+    'authentic appearance',
+    'clear details',
+    'professional quality',
+    'genuine moment',
+    'balanced composition',
+    'natural perspective'
   ] as const;
 
   private static readonly humanKeywords = [
@@ -36,26 +36,29 @@ export class PromptEngineer {
   ] as const;
 
   private static readonly faceEnhancements = [
-    'RAW photo, highly detailed skin, 8k uhd, dslr',
-    'professional portrait photography',
-    'detailed eyes, detailed pupils, detailed iris',
-    'subsurface scattering, realistic skin texture',
-    'masterpiece, best quality, ultra realistic',
-    'photorealistic, hyperdetailed, hyperrealistic',
-    'professional lighting, rembrandt lighting',
-    'sharp focus, HDR, 8K resolution',
-    'symmetrical eyes, detailed facial features'
+    'natural pose, authentic expression',
+    'professional photography, natural colors',
+    'clear features, balanced composition',
+    'natural appearance, genuine quality',
+    'professional quality, clear focus',
+    'balanced lighting, clean background',
+    'authentic look, natural presence',
+    'clear details, professional setup',
+    'natural perspective, genuine moment',
+    'professional composition, natural environment'
   ] as const;
 
   private static readonly negativePrompt = [
-    'deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime',
-    'deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs',
-    'disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation',
-    '(worst quality, low quality, normal quality:1.4)',
-    'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits',
-    'cropped, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry',
-    'missing arms, long neck, Humpbacked, deformed face, cross-eyed, weird eyes, stretched face',
-    'out of frame, mutation, poorly drawn, floating, disconnected, discontinuous, malformed hands, malformed fingers'
+    'unnatural features, artificial appearance',
+    'blurred features, unrealistic look',
+    'unbalanced composition, poor lighting',
+    'artificial colors, busy background',
+    'distorted proportions, messy presentation',
+    'complex shapes, cluttered layout',
+    'oversaturated, overexposed, underexposed',
+    'noisy, grainy, pixelated',
+    'low quality, artificial elements',
+    'complex background, distracting elements'
   ].join(', ');
 
   private static analyzeInput(input: string): string[] {
@@ -103,14 +106,14 @@ export class PromptEngineer {
   private static getSynonyms(term: string): string[] {
     // Enhanced synonym mapping
     const synonymMap: Record<string, string[]> = {
-      'photo': ['photograph', 'picture', 'image', 'shot'],
-      'painting': ['artwork', 'illustration', 'drawing', 'canvas'],
-      'portrait': ['headshot', 'bust', 'profile', 'face'],
-      'landscape': ['scenery', 'vista', 'panorama', 'nature'],
-      'modern': ['contemporary', 'current', 'present-day'],
-      'old': ['vintage', 'antique', 'aged', 'retro'],
-      'bright': ['luminous', 'radiant', 'glowing', 'vivid'],
-      'dark': ['shadowy', 'dim', 'moody', 'gloomy']
+      'photo': ['professional', 'photography', 'picture', 'image'],
+      'painting': ['artwork', 'artistic', 'natural', 'genuine'],
+      'portrait': ['headshot', 'professional', 'natural', 'authentic'],
+      'landscape': ['environment', 'natural', 'balanced', 'clear'],
+      'modern': ['professional', 'contemporary', 'balanced', 'clean'],
+      'old': ['vintage', 'authentic', 'genuine', 'natural'],
+      'bright': ['clear', 'balanced', 'natural', 'professional'],
+      'dark': ['balanced', 'natural', 'authentic', 'genuine']
     };
     
     return synonymMap[term] || [];
@@ -142,16 +145,16 @@ export class PromptEngineer {
     }
 
     // Check for potential issues and provide suggestions
-    if (!prompt.includes('style')) {
-      suggestions.push('Consider adding an art style');
+    if (!prompt.includes('professional')) {
+      suggestions.push('Consider adding professional quality');
     }
 
-    if (!prompt.includes('lighting')) {
-      suggestions.push('Consider describing the lighting');
+    if (!prompt.includes('natural')) {
+      suggestions.push('Consider adding natural elements');
     }
 
-    if (!prompt.includes('color')) {
-      suggestions.push('Consider adding color information');
+    if (!prompt.includes('balanced')) {
+      suggestions.push('Consider describing the composition');
     }
 
     // Check for banned content
@@ -211,7 +214,7 @@ export class PromptEngineer {
 
         // Add face-specific refinements for human subjects
         if (isHumanSubject) {
-          enhancedPrompt = `(RAW photo:1.2), (realistic:1.4), ${enhancedPrompt}`;
+          enhancedPrompt = `professional photography, natural colors, ${enhancedPrompt}`;
         }
 
         suggestions.push({
@@ -237,13 +240,11 @@ export class PromptEngineer {
       
       // Add technical parameters for better face generation
       enhancements.push(
-        '(high detailed skin:1.2)',
-        '(8k uhd, best quality, ultra realistic:1.2)',
-        '(realistic, photorealistic:1.4)',
-        '(masterpiece, top quality, best quality, official art, beautiful and aesthetic:1.2)',
-        '(detailed facial features:1.3)',
-        '(perfect eyes, detailed eyes, perfect face:1.4)',
-        'dramatic lighting, subsurface scattering'
+        'professional quality, natural appearance',
+        'balanced composition, clear focus',
+        'authentic expression, genuine moment',
+        'natural environment, clean background',
+        'professional setup, balanced lighting'
       );
     }
 
@@ -255,12 +256,11 @@ export class PromptEngineer {
     // Add quality enhancements
     if (options.quality) {
       enhancements.push(
-        '(masterpiece:1.4)',
-        '(best quality:1.4)',
-        '(ultra realistic:1.2)',
-        '(photorealistic:1.2)',
-        '8k resolution',
-        'HDR'
+        'professional quality',
+        'natural appearance',
+        'authentic look',
+        'clear details',
+        'balanced composition'
       );
     }
 

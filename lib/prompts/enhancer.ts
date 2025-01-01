@@ -12,45 +12,45 @@ export interface EnhancementOptions {
 
 export class PromptEnhancer {
   static readonly styles = {
-    photorealistic: 'professional photography, natural colors, realistic details',
-    cinematic: 'professional cinematography, natural lighting, clear focus',
-    artistic: 'artistic photography, natural style, authentic look',
-    portrait: 'professional portrait, natural pose, clear features',
-    fashion: 'fashion photography, natural style, professional quality',
-    product: 'product photography, clear details, professional lighting',
-    logo: 'minimalist logo design, clean lines, professional branding, vector style, corporate identity, scalable design'
+    photorealistic: 'professional photography, natural colors, clear focus',
+    cinematic: 'professional headshot, clean background, studio quality',
+    artistic: 'candid photography, natural environment, genuine moment',
+    portrait: 'modern portrait, natural pose, authentic expression',
+    fashion: 'professional quality, well-composed, balanced lighting',
+    product: 'high-end photography, clear focus, natural colors',
+    logo: 'minimalist logo design, clean lines, professional branding'
   } as const;
 
   static readonly lighting = {
-    studio: 'professional studio lighting, even illumination, clear shadows',
-    natural: 'natural lighting, soft illumination, balanced exposure',
-    dramatic: 'professional lighting, gentle contrast, clear illumination',
-    soft: 'soft lighting, gentle illumination, natural shadows',
-    logo: 'flat lighting, clean shadows, professional presentation'
+    studio: 'studio lighting, even illumination, professional setup',
+    natural: 'natural lighting, soft shadows, clear illumination',
+    dramatic: 'golden hour lighting, warm natural glow, soft highlights',
+    soft: 'ambient lighting, natural atmosphere, balanced exposure',
+    logo: 'flat lighting, clean presentation, professional display'
   } as const;
 
   static readonly cameras = {
-    dslr: 'professional camera, clear focus, natural depth',
-    medium: 'high quality camera, clear details, professional focus',
-    cinema: 'cinema camera, professional quality, natural look',
-    portrait: 'portrait lens, natural blur, professional focus',
-    logo: 'front view, clean capture, professional presentation'
+    dslr: 'professional photography, natural colors, clear focus',
+    medium: 'balanced composition, natural perspective, clear view',
+    cinema: 'centered frame, professional composition, clean background',
+    portrait: 'detailed portrait, natural pose, authentic expression',
+    logo: 'centered logo layout, balanced spacing, professional design'
   } as const;
 
   static readonly compositions = {
-    balanced: 'balanced composition, natural framing, clear view',
-    centered: 'centered composition, clean framing, clear view',
-    dynamic: 'natural composition, clear angle, professional framing',
-    closeup: 'close-up composition, clear details, natural framing',
-    logo: 'centered logo composition, balanced spacing, professional layout'
+    balanced: 'balanced composition, natural perspective, clear view',
+    centered: 'centered frame, professional composition, clean background',
+    dynamic: 'detailed portrait, natural pose, authentic expression',
+    closeup: 'environmental portrait, natural setting, genuine context',
+    logo: 'centered logo layout, balanced spacing, professional design'
   } as const;
 
   static readonly qualities = {
-    standard: 'high quality, clear details, natural look',
-    premium: 'professional quality, clear details, natural appearance',
-    maximum: 'best quality, clear details, natural features',
-    balanced: 'balanced quality, clear focus, natural details',
-    logo: 'vector quality, crisp edges, professional finish'
+    standard: 'professional and polished, natural presence, authentic',
+    premium: 'elegant and natural, genuine quality, authentic look',
+    maximum: 'bright and clear, natural energy, authentic feel',
+    balanced: 'calm and natural, genuine atmosphere, authentic mood',
+    logo: 'corporate and professional, minimalist style, modern brand'
   } as const;
 
   static readonly negativeBase = [
@@ -78,42 +78,42 @@ export class PromptEnhancer {
     'clear focus',
     'balanced lighting',
     'natural shadows',
-    'realistic textures',
+    'authentic appearance',
     'clear details',
-    'natural lighting',
-    'soft shadows',
-    'balanced exposure',
-    'natural atmosphere',
-    'clean lines',
-    'minimalist design',
-    'professional branding',
-    'scalable graphics',
-    'vector style'
+    'professional quality',
+    'genuine moment',
+    'balanced composition',
+    'natural perspective',
+    'clean background',
+    'authentic expression',
+    'natural environment',
+    'professional setup',
+    'balanced exposure'
   ] as const;
 
   static readonly humanEnhancements = [
-    'natural facial features',
-    'realistic facial proportions',
-    'natural skin texture',
-    'natural body proportions',
-    'clear facial features',
-    'natural facial structure',
-    'balanced facial features',
-    'natural skin tones',
-    'clear eyes',
-    'natural expression'
+    'natural pose',
+    'authentic expression',
+    'natural appearance',
+    'genuine quality',
+    'clear features',
+    'natural presence',
+    'balanced composition',
+    'natural colors',
+    'clear focus',
+    'professional quality'
   ] as const;
 
   static readonly logoEnhancements = [
-    'minimalist design',
+    'minimalist logo design',
     'clean lines',
     'professional branding',
-    'vector style graphics',
-    'scalable design',
-    'balanced composition',
-    'clear iconography',
+    'centered layout',
+    'balanced spacing',
+    'professional design',
+    'clear presentation',
     'simple shapes',
-    'professional typography',
+    'modern brand',
     'corporate identity'
   ] as const;
 
@@ -167,17 +167,17 @@ export class PromptEnhancer {
 
     if (isHumanSubject) {
       return `${basePrompt}, ${enhancements.join(', ')} 
-        ### Negative prompt: unnatural features, distorted proportions, 
-        blurred features, unrealistic face, asymmetrical features, 
-        unnatural skin, artificial lighting, oversaturated colors`;
+        ### Negative prompt: unnatural features, artificial appearance, 
+        blurred features, unrealistic look, unbalanced composition, 
+        poor lighting, artificial colors, busy background`;
     }
 
     if (isLogoSubject) {
       return `${basePrompt}, ${enhancements.join(', ')} 
         ### Negative prompt: complex background, busy design, 
-        text heavy, cluttered layout, gradients, 
-        photorealistic elements, detailed illustrations, 
-        noisy textures, drop shadows`;
+        cluttered layout, unbalanced composition, 
+        photorealistic elements, complex shapes, 
+        messy presentation, distracting elements`;
     }
 
     return enhancements.length > 0 
